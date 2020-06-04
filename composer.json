@@ -1,0 +1,14 @@
+{
+  "name": "blockchyp/blockchyp-woocommerce",
+  "type": "wordpress-plugin",
+  "description": "BlockChyp WooCommerce",
+  "homepage": "https://www.blockchyp.com/",
+  "license": "MIT",
+  "require": {
+    "php": ">=5.6.0",
+    "blockchyp/blockchyp-php": "^2.3.6"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^5.7"
+  }
+}

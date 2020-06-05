@@ -50,7 +50,6 @@ function blockchyp_woocommerce_missing_wc_notice() {
  * @return string
  */
 function blockchyp_woocommerce_wc_not_supported() {
-	/* translators: $1. Minimum WooCommerce version. $2. Current WooCommerce version. */
 	echo '<div class="error"><p><strong>' . sprintf( esc_html__( 'BlockChyp requires WooCommerce %1$s or greater to be installed and active. WooCommerce %2$s is no longer supported.', 'blockchyp-woocommerce' ), WC_STRIPE_MIN_WC_VER, WC_VERSION ) . '</strong></p></div>';
 }
 
@@ -81,12 +80,8 @@ function blockchyp_woocommerce_init() {
 			 $this->test_gateway_host  = $this->settings['test_gateway_host'];
 			 $this->supports           = array(
 				 'products',
-				 'refunds',
-				 'tokenization',
-				 'add_payment_method'
+				 'refunds'
 			 );
-
-
 
 			 add_action('woocommerce_update_options_payment_gateways_' . $this->id, array(&$this, 'process_admin_options'));
 
@@ -95,7 +90,7 @@ function blockchyp_woocommerce_init() {
 		}
 
 		/**
-		 * Payment form on checkout page
+		 * Render the BlockChyp payment form.
 		 */
 		public function payment_fields() {
 
@@ -175,10 +170,9 @@ function blockchyp_woocommerce_init() {
 		}
 
 		/**
-		 * Process the payment and return the result
-		 * @param int $order_id this is use to process the order on basis of this id and also update the payment transaction for this order.
-		 * @return array with Success and url with order object.
-		 * throw error message on failure of payment.
+		 * Invoke the BlockChyp API and capture a payment.
+		 * @param int $order_id
+		 * @return array
 		 **/
 		function process_payment($order_id) {
 
@@ -191,12 +185,8 @@ function blockchyp_woocommerce_init() {
 			$order    = new WC_Order( $order_id );
 
 			$user     = wp_get_current_user();
-			$address  = $_POST['billing_address_1'] . ' ' . $_POST['billing_address_2'];
-			$city     = $_POST['billing_city'];
-			$state    = $_POST['billing_state'];
+			$address  = $_POST['billing_address_1'];
 			$postcode = $_POST['billing_postcode'];
-			$country  = $_POST['billing_country'];
-			$phone    = $_POST['billing_phone'];
 			$cardholder  = $_POST['blockchyp_cardholder'];
 			$token  = $_POST['blockchyp_token'];
 			$total    = $woocommerce->cart->total;
@@ -212,18 +202,63 @@ function blockchyp_woocommerce_init() {
 				'amount' => $total,
 				'test' => $testmode,
 				'postalCode' => $postcode,
+				'address' => $address,
 				'transactionRef' => strval($order_id)
 			];
 
-			$response = BlockChyp::charge($request);
+			$response = [];
 
-			if (!$response["success"] || !response["approved"]) {
-				throw New Exception($response["responseDescription"]);
+			try {
+
+				$response = BlockChyp::charge($request);
+
+				if (!$response["success"] || !$response["approved"]) {
+					$order->add_order_note( sprintf("BlockChyp transaction failed: %s", $response["responseDescription"]));
+					throw new Exception($response["responseDescription"]);
+				}
+
+				if ($response["avsResponse"] == "no_match") {
+					$order->add_order_note( sprintf("BlockChyp transaction reversed due to AVS failure: %s", $response["avsResponse"]));
+					try {
+						$request["paymentType"] = "no-reverse-cache";
+						$reverseResponse = BlockChyp::reverse($request);
+					} catch (Exception $re) {
+						$order->add_order_note( sprintf("Transaction Reversal Failed: %s", $reverseResponse["responseDescription"]));
+					}
+					throw new Exception("Unable to verify billing address.");
+				}
+
+				$transaction_id = $response["transactionId"];
+				$order->payment_complete($transaction_id);
+				$message = sprintf(
+					'BlockChyp payment successful.<br/>
+					 Transaction ID: %s<br/>
+					 Auth Code: %s<br/>
+					 Payment Type: %s (%s)<br/>
+					 AVS Response: %s<br/>
+					 Authorized Amount: %s
+				',
+				$response["transactionId"],
+				$response["authCode"],
+				$response["paymentType"],
+				$response["maskedPan"],
+				$response["avsResponse"],
+				$response["authorizedAmount"]
+				);
+
+				$order->add_order_note($message);
+
+
+			} catch (Exception $e) {
+				try {
+					$order->add_order_note( sprintf("Reversing Transaction Due To Exception: %s", $e->getMessage()));
+					$request["paymentType"] = "no-reverse-cache";
+					$reverseResponse = BlockChyp::reverse($request);
+				} catch (Exception $re) {
+					$order->add_order_note( sprintf("Transaction Reversal Failed: %s", $reverseResponse["responseDescription"]));
+				}
+				throw new Exception($e->getMessage());
 			}
-
-			throw New Exception(json_encode($response));
-
-			//throw new Exception('this integration ain\'t done yet');
 
 			return array(
 					'result'   => 'success',
@@ -233,8 +268,6 @@ function blockchyp_woocommerce_init() {
 		}
 
 		/**
-		 * Payment_scripts function.
-		 *
 		 * Outputs BlockChyp payment scripts.
 		 */
 		public function payment_scripts() {
@@ -257,7 +290,7 @@ function blockchyp_woocommerce_init() {
 		}
 
 		/*
-		 *	admin form and other option title description define from here some are not editable from admin side some like workflowid merchantprofile id are editable from admin *    panel.
+		 *	Defines the configuration fields needed to setup BlockChyp.
 		 */
 		function init_form_fields(){
 				$this->form_fields = array(
@@ -314,6 +347,58 @@ function blockchyp_woocommerce_init() {
 														'description' => __('BlockChyp Test Gateway')
 						)
 				);
+		}
+
+		/**
+		 * Process a BlockChyp refund.
+		 * @param int $order_id
+		 * @param float $amount
+		 * @param string $reason
+		 * @return boolean
+		 **/
+		public function process_refund( $order_id, $amount = NULL, $reason = '' ) {
+
+			global $woocommerce;
+			$order    = new WC_Order( $order_id );
+			$transaction_id = $order->transaction_id;
+
+			$testmode = false;
+			if ($this->settings['testmode'] == 'yes') {
+				$testmode = true;
+			}
+
+			BlockChyp::setApiKey($this->api_key);
+			BlockChyp::setBearerToken($this->bearer_token);
+			BlockChyp::setSigningKey($this->signing_key);
+			BlockChyp::setGatewayHost($this->gateway_host);
+			BlockChyp::setTestGatewayHost($this->test_gateway_host);
+
+			$request = [
+				'transactionId' => $transaction_id,
+				'amount' => $amount,
+				'test' => $testmode
+			];
+
+			try {
+				$response = BlockChyp::refund($request);
+
+				if (!$response["success"] || !$response["approved"]) {
+					$order->add_order_note( sprintf("BlockChyp refund failed: %s", $response["responseDescription"]));
+					throw new Exception($response["responseDescription"]);
+				}
+
+				if ($response["approved"]) {
+					$order->add_order_note( sprintf("BlockChyp refund approved.<br/>Amount: %s<br/>Auth Code: %s", $amount, $response["authCode"]));
+					return true;
+				}
+
+				$order->add_order_note( sprintf("BlockChyp refund failed: %s", $response["responseDescription"]));
+			} catch (Exception $e) {
+				$order->add_order_note( sprintf("Exception processing BlockChyp refund: %s ", $e->getMessage()));
+			}
+
+			return false;
+
 		}
 
 	}

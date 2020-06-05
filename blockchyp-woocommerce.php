@@ -220,7 +220,7 @@ function blockchyp_woocommerce_init() {
 				if ($response["avsResponse"] == "no_match") {
 					$order->add_order_note( sprintf("BlockChyp transaction reversed due to AVS failure: %s", $response["avsResponse"]));
 					try {
-						$request["paymentType"] = "no-reverse-cache";
+						$request["paymentType"] = "skip-reversal-cache";
 						$reverseResponse = BlockChyp::reverse($request);
 					} catch (Exception $re) {
 						$order->add_order_note( sprintf("Transaction Reversal Failed: %s", $reverseResponse["responseDescription"]));
@@ -252,7 +252,7 @@ function blockchyp_woocommerce_init() {
 			} catch (Exception $e) {
 				try {
 					$order->add_order_note( sprintf("Reversing Transaction Due To Exception: %s", $e->getMessage()));
-					$request["paymentType"] = "no-reverse-cache";
+					$request["paymentType"] = "skip-reversal-cache";
 					$reverseResponse = BlockChyp::reverse($request);
 				} catch (Exception $re) {
 					$order->add_order_note( sprintf("Transaction Reversal Failed: %s", $reverseResponse["responseDescription"]));

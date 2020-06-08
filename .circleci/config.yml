@@ -1,4 +1,4 @@
-version: 1
+version: 2
 jobs:
   build:
     docker:
@@ -21,11 +21,22 @@ jobs:
           key: composer-{{ checksum "composer.lock" }}
 
       - run:
-          name: Build
-          command: echo NOT IMPLEMENTED
+          name: Lint
+          command: vendor/friendsofphp/php-cs-fixer/php-cs-fixer fix --dry-run --diff
 
 workflows:
   version: 2
   main:
     jobs:
-      - build
+      - build:
+          filters:
+            tags:
+              only: /^v\d+\.\d+\.\d+.*$/
+      - publish:
+          requires:
+            - build
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v\d+\.\d+\.\d+.*$/

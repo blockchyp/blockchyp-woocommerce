@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: BlockChyp WooCommerce Plugin
+ * Plugin Name: BlockChyp WooCommerce
  * Plugin URI: https://wordpress.org/plugins/blockchyp-woocommerce
  * Description: Connect your WooCommerce store with BlockChyp.
  * Author: BlockChyp, Inc.

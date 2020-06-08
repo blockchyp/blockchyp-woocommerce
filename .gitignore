@@ -1,1 +1,5 @@
 /vendor/
+.php_cs.cache
+*.log
+*.sql
+*.sqlite

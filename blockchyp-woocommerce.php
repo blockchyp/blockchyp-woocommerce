@@ -167,7 +167,7 @@ function blockchyp_woocommerce_init()
                         }
                     }
                 });
-            </script>'
+            </script>
 EOT;
 ?>
             <style>

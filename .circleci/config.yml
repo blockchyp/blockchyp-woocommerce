@@ -32,11 +32,11 @@ workflows:
           filters:
             tags:
               only: /^v\d+\.\d+\.\d+.*$/
-      - publish:
-          requires:
-            - build
-          filters:
-            branches:
-              ignore: /.*/
-            tags:
-              only: /^v\d+\.\d+\.\d+.*$/
+      #- publish:
+      #    requires:
+      #      - build
+      #    filters:
+      #      branches:
+      #        ignore: /.*/
+      #      tags:
+      #        only: /^v\d+\.\d+\.\d+.*$/

@@ -84,6 +84,16 @@ add_action('plugins_loaded', 'blockchyp_woocommerce_init');
 
 function blockchyp_woocommerce_init()
 {
+    if (!class_exists('WC_Payment_Gateway')) {
+        add_action('admin_notices', 'blockchyp_woocommerce_missing_wc_notice');
+        return;
+    }
+
+    if (version_compare(WC_VERSION, WC_BLOCKCHYP_MIN_WC_VER, '<')) {
+        add_action('admin_notices', 'blockchyp_woocommerce_wc_not_supported');
+        return;
+    }
+
     class WC_BlockChyp extends WC_Payment_Gateway
     {
         public function __construct()

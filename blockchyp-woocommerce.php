@@ -1,7 +1,7 @@
 <?php
 /**
- * Plugin Name: BlockChyp WooCommerce
- * Plugin URI: https://wordpress.org/plugins/blockchyp-woocommerce
+ * Plugin Name: BlockChyp For WooCommerce
+ * Plugin URI: https://wordpress.org/plugins/blockchyp-for-woocommerce
  * Description: Connect your WooCommerce store with BlockChyp.
  * Author: BlockChyp, Inc.
  * Author URI: https://www.blockchyp.com
@@ -10,7 +10,7 @@
  * Tested up to: 5.4
  * WC requires at least: 3.0
  * WC tested up to: 4.0
- * Text Domain: blockchyp-woocommerce
+ * Text Domain: blockchyp-for-woocommerce
  * Domain Path: /languages
  *
  */

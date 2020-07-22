@@ -209,10 +209,10 @@ EOT;
             $order = new WC_Order($order_id);
 
             $user = wp_get_current_user();
-            $address = $_POST['billing_address_1'];
-            $postcode = $_POST['billing_postcode'];
-            $cardholder = $_POST['blockchyp_cardholder'];
-            $token = $_POST['blockchyp_token'];
+            $address = sanitize_text_field($_POST['billing_address_1']);
+            $postcode = sanitize_text_field($_POST['billing_postcode']);
+            $cardholder = sanitize_text_field($_POST['blockchyp_cardholder']);
+            $token = sanitize_text_field($_POST['blockchyp_token']);
             $total = $woocommerce->cart->total;
 
             BlockChyp::setApiKey($this->api_key);

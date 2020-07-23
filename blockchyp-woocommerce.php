@@ -308,7 +308,7 @@ EOT;
                     $order->add_order_note(
                         sprintf(
                             "Transaction Reversal Failed: %s",
-                            $reverseResponse["responseDescription"]
+                            $re->getMessage()
                         )
                     );
                 }

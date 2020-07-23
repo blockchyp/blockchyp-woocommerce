@@ -263,13 +263,13 @@ EOT;
                         )
                     );
                     try {
-                        $request["paymentType"] = "skip-reverse-cache";
+                        $request["paymentType"] = "skip-reversal-cache";
                         $reverseResponse = BlockChyp::reverse($request);
                     } catch (Exception $re) {
                         $order->add_order_note(
                             sprintf(
                                 "Transaction Reversal Failed: %s",
-                                $reverseResponse["responseDescription"]
+                                $re->getMessage()
                             )
                         );
                     }
@@ -302,7 +302,7 @@ EOT;
                             $e->getMessage()
                         )
                     );
-                    $request["paymentType"] = "skip-reverse-cache";
+                    $request["paymentType"] = "skip-reversal-cache";
                     $reverseResponse = BlockChyp::reverse($request);
                 } catch (Exception $re) {
                     $order->add_order_note(

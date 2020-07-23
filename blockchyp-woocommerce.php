@@ -1,7 +1,7 @@
 <?php
 /**
- * Plugin Name: BlockChyp WooCommerce
- * Plugin URI: https://wordpress.org/plugins/blockchyp-woocommerce
+ * Plugin Name: BlockChyp For WooCommerce
+ * Plugin URI: https://wordpress.org/plugins/blockchyp-for-woocommerce
  * Description: Connect your WooCommerce store with BlockChyp.
  * Author: BlockChyp, Inc.
  * Author URI: https://www.blockchyp.com
@@ -10,7 +10,7 @@
  * Tested up to: 5.4
  * WC requires at least: 3.0
  * WC tested up to: 4.0
- * Text Domain: blockchyp-woocommerce
+ * Text Domain: blockchyp-for-woocommerce
  * Domain Path: /languages
  *
  */
@@ -84,6 +84,16 @@ add_action('plugins_loaded', 'blockchyp_woocommerce_init');
 
 function blockchyp_woocommerce_init()
 {
+    if (!class_exists('WC_Payment_Gateway')) {
+        add_action('admin_notices', 'blockchyp_woocommerce_missing_wc_notice');
+        return;
+    }
+
+    if (version_compare(WC_VERSION, WC_BLOCKCHYP_MIN_WC_VER, '<')) {
+        add_action('admin_notices', 'blockchyp_woocommerce_wc_not_supported');
+        return;
+    }
+
     class WC_BlockChyp extends WC_Payment_Gateway
     {
         public function __construct()
@@ -209,10 +219,10 @@ EOT;
             $order = new WC_Order($order_id);
 
             $user = wp_get_current_user();
-            $address = $_POST['billing_address_1'];
-            $postcode = $_POST['billing_postcode'];
-            $cardholder = $_POST['blockchyp_cardholder'];
-            $token = $_POST['blockchyp_token'];
+            $address = sanitize_text_field($_POST['billing_address_1']);
+            $postcode = sanitize_text_field($_POST['billing_postcode']);
+            $cardholder = sanitize_text_field($_POST['blockchyp_cardholder']);
+            $token = sanitize_text_field($_POST['blockchyp_token']);
             $total = $woocommerce->cart->total;
 
             BlockChyp::setApiKey($this->api_key);
@@ -253,13 +263,13 @@ EOT;
                         )
                     );
                     try {
-                        $request["paymentType"] = "skip-reverse-cache";
+                        $request["paymentType"] = "skip-reversal-cache";
                         $reverseResponse = BlockChyp::reverse($request);
                     } catch (Exception $re) {
                         $order->add_order_note(
                             sprintf(
                                 "Transaction Reversal Failed: %s",
-                                $reverseResponse["responseDescription"]
+                                $re->getMessage()
                             )
                         );
                     }
@@ -292,13 +302,13 @@ EOT;
                             $e->getMessage()
                         )
                     );
-                    $request["paymentType"] = "skip-reverse-cache";
+                    $request["paymentType"] = "skip-reversal-cache";
                     $reverseResponse = BlockChyp::reverse($request);
                 } catch (Exception $re) {
                     $order->add_order_note(
                         sprintf(
                             "Transaction Reversal Failed: %s",
-                            $reverseResponse["responseDescription"]
+                            $re->getMessage()
                         )
                     );
                 }

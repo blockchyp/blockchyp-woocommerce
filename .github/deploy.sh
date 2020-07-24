@@ -4,7 +4,7 @@ set -eu
 
 build_dir="$GITHUB_WORKSPACE/build"
 staging_dir="$GITHUB_WORKSPACE/staging"
-git_tag="$GITHUB_REF"
+git_tag="${GITHUB_REF##*/}"
 svn_tag="${git_tag#v}"
 files=(
     LICENSE

@@ -5,7 +5,7 @@
  * Description: Connect your WooCommerce store with BlockChyp.
  * Author: BlockChyp, Inc.
  * Author URI: https://www.blockchyp.com
- * Version: 1.0.0
+ * Version: 1.0.1
  * Requires at least: 4.4
  * Tested up to: 5.4
  * WC requires at least: 3.0

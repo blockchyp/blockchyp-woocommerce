@@ -37,12 +37,15 @@ rm -rf "$staging_dir/trunk"
 cp -r "$build_dir" "$staging_dir/trunk"
 cp -r "$build_dir" "$staging_dir/tags/$svn_tag"
 
+rm -rf "$staging_dir/assets"
+cp -r "$build_dir/assets" "$staging_dir/assets"
+
 pushd "$staging_dir"
 svn stat | grep '^?' | awk '{print $2}' | xargs -I x svn add x@
 svn stat | grep '^!' | awk '{print $2}' | xargs -I x svn rm --force x@
 
-#svn ci --no-auth-cache \
-#    --username blockchyp \
-#    --password "$SVN_PASSWORD" \
-#    -m "Deploy version $svn_tag"
+svn ci --no-auth-cache \
+    --username blockchyp \
+    --password "$SVN_PASSWORD" \
+    -m "Deploy version $svn_tag"
 popd

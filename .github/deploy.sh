@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -eu
+set -eux
 
 build_dir="$GITHUB_WORKSPACE/build"
 staging_dir="$GITHUB_WORKSPACE/staging"
@@ -29,7 +29,9 @@ done
 
 svn checkout http://svn.wp-plugins.org/blockchyp-for-woocommerce "$staging_dir"
 
-test -d "$staging_dir/tags/$svn_tag" && echo "Tag already exists: $svn_tag" && exit 1 || :
+test -d "$staging_dir/tags/$svn_tag" \
+    && echo "Tag already exists: $svn_tag" && exit 1 \
+    || :
 
 rm -rf "$staging_dir/trunk"
 cp -r "$build_dir" "$staging_dir/trunk"
@@ -39,5 +41,8 @@ pushd "$staging_dir"
 svn stat | grep '^?' | awk '{print $2}' | xargs -I x svn add x@
 svn stat | grep '^!' | awk '{print $2}' | xargs -I x svn rm --force x@
 
-svn ci --no-auth-cache --username blockchyp --password "$SVN_PASSWORD" -m "Deploy version $svn_tag"
+#svn ci --no-auth-cache \
+#    --username blockchyp \
+#    --password "$SVN_PASSWORD" \
+#    -m "Deploy version $svn_tag"
 popd

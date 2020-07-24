@@ -25,7 +25,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-php-no-dev-
 
-      - name: Intstall dependencies
+      - name: Install dependencies
         if: steps.composer-cache.outputs.cache-hit != 'true'
         run: composer install --prefer-dist --no-progress --no-suggest --no-dev
 

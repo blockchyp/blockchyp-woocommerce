@@ -31,3 +31,6 @@ jobs:
 
       - name: Deploy
         run: .github/deploy.sh
+        env:
+          SVN_USER: ${{ secrets.SVN_USER }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}

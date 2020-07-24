@@ -1,4 +1,5 @@
 === BlockChyp WooCommerce ===
+Contributors: blockchyp
 Tags: payments
 Requires at least: 4.4
 Tested up to: 5.4

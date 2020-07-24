@@ -39,5 +39,5 @@ pushd "$staging_dir"
 svn stat | grep '^?' | awk '{print $2}' | xargs -I x svn add x@
 svn stat | grep '^!' | awk '{print $2}' | xargs -I x svn rm --force x@
 
-svn ci --no-auth-cache --username "$SVN_USER" --password "$SVN_PASSWORD" -m "Deploy version $svn_tag"
+svn ci --no-auth-cache --username blockchyp --password "$SVN_PASSWORD" -m "Deploy version $svn_tag"
 popd

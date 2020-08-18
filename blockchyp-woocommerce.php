@@ -209,12 +209,15 @@ EOT;
               <input type="hidden" id="blockchyp_token" name="blockchyp_token"/>
             </div>
             <?php
-                if ($this->settings['render_postalcode'] == 'yes')
+                if ($this->settings['render_postalcode'] == 'yes') {
             ?>
                 <div>
                   <label class="blockchyp-label">Postal Code</label>
                   <input class="blockchyp-input" style="width: 100%;" maxlength="5" id="blockchyp_postalcode" name="blockchyp_postalcode"/>
                 </div>
+             <?php
+                }
+             ?>
 <?php ob_end_flush();
 
         }

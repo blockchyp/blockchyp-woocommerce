@@ -153,14 +153,22 @@ function blockchyp_woocommerce_init()
                     if (bcSelected) {
                         var tokenInput = jQuery('#blockchyp_token').val();
                         var cardholder = jQuery('#blockchyp_cardholder').val();
-                        var postalCode = jQuery('#billing_postcode').val();
-                        var postalCodeTokens = postalCode.split('-');
+                        var postalCode = jQuery('#blockchyp_postalcode')
+                        var postalCodeValue = '';
+                        if (!postalCode) {
+                            postalCode = jQuery('#billing_postcode')
+                        }
+                        if (postalCode) {
+                            postalCodeValue = postalCode.val();
+                        }
                         if (!tokenInput) {
                             e.preventDefault();
                             var req = {
                                 test: {$testmode},
-                                cardholderName: cardholder,
-                                postalCode: postalCodeTokens[0]
+                                cardholderName: cardholder
+                            }
+                            if (postalCodeValue) {
+                                req.postalCode = postalCodeValue.split('-')[0];
                             }
                             jQuery('form.woocommerce-checkout').off();
                             tokenizer.tokenize('{$this->tokenizing_key}', req)
@@ -197,9 +205,18 @@ EOT;
             </div>
             <div>
               <label class="blockchyp-label">Cardholder Name</label>
-              <input class="blockchyp-input" style="width: 100%;" id="cardholder" name="blockchyp_cardholder"/>
+              <input class="blockchyp-input" style="width: 100%;" id="blockchyp_cardholder" name="blockchyp_cardholder"/>
               <input type="hidden" id="blockchyp_token" name="blockchyp_token"/>
             </div>
+                <?php
+                    if ($this->settings['render_postalcode'] == 'yes') {
+                        ?>
+                <div>
+                  <label class="blockchyp-label">Postal Code</label>
+                  <input class="blockchyp-input" style="width: 100%;" maxlength="5" id="blockchyp_postalcode" name="blockchyp_postalcode"/>
+                </div>
+                <?php
+                    } ?>
 <?php ob_end_flush();
         }
 
@@ -431,6 +448,18 @@ EOT;
                     'default' => 'https://test.blockchyp.com',
                     'desc_tip' => true,
                     'description' => __('BlockChyp Test Gateway'),
+                ],
+                'render_postalcode' => [
+                    'title' => __('Postal Code Field', 'blockchyp-woocommerce'),
+                    'type' => 'checkbox',
+                    'label' => __(
+                        'Add Postal Code Field',
+                        'blockchyp-woocommerce'
+                    ),
+                    'default' => 'no',
+                    'description' => __(
+                        'If your checkout page doesn\'t include a billing address, check this box to add a billing postal code to the payment page'
+                    ),
                 ],
             ];
         }

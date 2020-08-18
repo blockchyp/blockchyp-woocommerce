@@ -210,7 +210,7 @@ EOT;
             </div>
                 <?php
                     if ($this->settings['render_postalcode'] == 'yes') {
-                ?>
+                        ?>
                 <div>
                   <label class="blockchyp-label">Postal Code</label>
                   <input class="blockchyp-input" style="width: 100%;" maxlength="5" id="blockchyp_postalcode" name="blockchyp_postalcode"/>

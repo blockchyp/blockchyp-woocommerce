@@ -3,7 +3,7 @@ Contributors: blockchyp
 Tags: payments
 Requires at least: 4.4
 Tested up to: 5.4
-Stable tag: 1.0.3
+Stable tag: 1.0.4
 Requires PHP: 7.0
 License: MIT License
 License URI: https://opensource.org/licenses/MIT
@@ -56,6 +56,9 @@ As of this writing, BlockChyp processes payments in the US only.
 2. Example BlockChyp Credit Card entry form.
 
 == Changelog ==
+
+= 1.0.4
+* Add double submit protection.
 
 = 1.0.3
 * Fix a big related to gateway routing.

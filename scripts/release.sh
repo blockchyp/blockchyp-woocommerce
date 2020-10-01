@@ -15,9 +15,9 @@ if test -z "$notes"; then
     read -p "Enter release notes: " notes
 fi
 
-sed -i "s|Stable tag: .*|Stable tag: $version|" readme.txt
-sed -i "s|== Changelog ==|== Changelog ==\n\n= $version\n* $notes|" readme.txt
-sed -i "s|^ \* Version: .*| * Version: $version|" blockchyp-woocommerce.php
+sed -i'' "s|Stable tag: .*|Stable tag: $version|" readme.txt
+sed -i'' "s|== Changelog ==|== Changelog ==\n\n= $version\n* $notes|" readme.txt
+sed -i'' "s|^ \* Version: .*| * Version: $version|" blockchyp-woocommerce.php
 
 git diff
 

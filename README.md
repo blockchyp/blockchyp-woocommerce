@@ -5,16 +5,15 @@
 
 ## Publishing a new version
 
-Update readme.txt with the new version and changelog.
-
 Create pull request and merge to the main branch.
 
 Tag and push:
 
 ```
-git tag -am v1.0.0 v1.0.0
-git push --follow-tags
+./scripts/release.sh
 ```
+
+Follow the prompts for creating a new release.
 
 Check github actions for problems. You should recieve a changelog from
 wordpress within several minutes.

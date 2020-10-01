@@ -139,6 +139,7 @@ function blockchyp_woocommerce_init()
 
             echo <<<EOT
             <script>
+                var blockchyp_enrolled = false;
                 jQuery(document).ready(function() {
                     var options = {
                         postalCode: false
@@ -150,7 +151,7 @@ function blockchyp_woocommerce_init()
                 jQuery('form.woocommerce-checkout').on('click', 'button[type="submit"][name="woocommerce_checkout_place_order"]', function (e) {
                     var self = this;
                     var bcSelected = jQuery('#payment_method_blockchyp').is(':checked');
-                    if (bcSelected) {
+                    if (bcSelected && !blockchyp_enrolled) {
                         var tokenInput = jQuery('#blockchyp_token').val();
                         var cardholder = jQuery('#blockchyp_cardholder').val();
                         var postalCode = jQuery('#blockchyp_postalcode')
@@ -170,16 +171,20 @@ function blockchyp_woocommerce_init()
                             if (postalCodeValue) {
                                 req.postalCode = postalCodeValue.split('-')[0];
                             }
+                            blockchyp_enrolled = true
                             jQuery('form.woocommerce-checkout').off();
                             tokenizer.tokenize('{$this->tokenizing_key}', req)
                             .then(function (response) {
                                 if (response.data.success) {
-                                    console.log(JSON.stringify(response.data));
                                     jQuery('#blockchyp_token').val(response.data.token);
+                                    if (!response.data.token) {
+                                        blockchyp_enrolled = false
+                                    }
                                     jQuery('button[type="submit"][name="woocommerce_checkout_place_order"]').trigger('click');
                                 }
                             })
                             .catch(function (error) {
+                              blockchyp_enrolled = false
                               console.log(error);
                             })
                         }

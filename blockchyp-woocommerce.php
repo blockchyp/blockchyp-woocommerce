@@ -145,7 +145,7 @@ function blockchyp_woocommerce_init()
                     };
                     tokenizer.gatewayHost = '{$this->gateway_host}';
                     tokenizer.testGatewayHost = '{$this->test_gateway_host}';
-                    tokenizer.render('{$this->tokenizing_key}', true, 'secure-input', options);
+                    tokenizer.render('{$this->tokenizing_key}', {$testmode}, 'secure-input', options);
                 });
                 jQuery('form.woocommerce-checkout').on('click', 'button[type="submit"][name="woocommerce_checkout_place_order"]', function (e) {
                     var self = this;
@@ -349,7 +349,10 @@ EOT;
                 return;
             }
 
-            $testmode = $this->settings['testmode'];
+            $testmode = false;
+            if ($this->settings['testmode'] == 'yes') {
+                $testmode = true;
+            }
 
             if ($testmode) {
                 wp_register_script(

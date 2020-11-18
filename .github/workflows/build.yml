@@ -22,13 +22,46 @@ jobs:
         uses: actions/cache@v2
         with:
           path: vendor
-          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}-
           restore-keys: |
             ${{ runner.os }}-php-
 
-      - name: Intstall dependencies
+      - name: Install dependencies
         if: steps.composer-cache.outputs.cache-hit != 'true'
         run: composer install --prefer-dist --no-progress --no-suggest
 
       - name: Lint
         run: vendor/friendsofphp/php-cs-fixer/php-cs-fixer fix --dry-run --diff
+
+  push:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Validate composer
+        run: composer validate
+
+      - name: Cache dependencies
+        id: composer-cache
+        uses: actions/cache@v2
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-no-dev-${{ hashFiles('**/composer.lock') }}-
+          restore-keys: |
+            ${{ runner.os }}-php-no-dev-
+
+      - name: Install dependencies
+        if: steps.composer-cache.outputs.cache-hit != 'true'
+        run: composer install --prefer-dist --no-progress --no-suggest --no-dev
+
+      - name: Sync to S3
+        run: .github/deploy.sh s3
+        env:
+          TEST_S3_BUCKET: ${{ secrets.TEST_S3_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+          WP_CLUSTER: ${{ secrets.WP_CLUSTER }}
+          WP_SYNC_TASKDEF: ${{ secrets.WP_SYNC_TASKDEF }}

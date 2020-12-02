@@ -33,6 +33,8 @@ jobs:
 
   push:
 
+    needs: build
+
     runs-on: ubuntu-latest
 
     steps:
@@ -40,6 +42,9 @@ jobs:
 
       - name: Validate composer
         run: composer validate
+
+      - name: Clear dependencies
+        run: rm -rf vendor
 
       - name: Cache dependencies
         id: composer-cache

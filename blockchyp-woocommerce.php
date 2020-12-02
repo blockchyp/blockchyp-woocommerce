@@ -283,8 +283,6 @@ EOT;
             try {
                 $response = BlockChyp::charge($request);
 
-                error_log(json_encode($response));
-
                 if (!$response["success"] || !$response["approved"]) {
                     $order->add_order_note(
                         sprintf(

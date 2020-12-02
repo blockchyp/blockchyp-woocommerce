@@ -247,7 +247,6 @@ EOT;
          **/
         public function process_payment($order_id)
         {
-
             $testmode = false;
             if ($this->settings['testmode'] == 'yes') {
                 $testmode = true;

@@ -5,7 +5,7 @@
  * Description: Connect your WooCommerce store with BlockChyp.
  * Author: BlockChyp, Inc.
  * Author URI: https://www.blockchyp.com
- * Version: 1.0.3
+ * Version: 1.0.5
  * Requires at least: 4.4
  * Tested up to: 5.4
  * WC requires at least: 3.0
@@ -148,10 +148,18 @@ function blockchyp_woocommerce_init()
                     tokenizer.testGatewayHost = '{$this->test_gateway_host}';
                     tokenizer.render('{$this->tokenizing_key}', {$testmode}, 'secure-input', options);
                 });
-                jQuery('form.woocommerce-checkout').on('click', 'button[type="submit"][name="woocommerce_checkout_place_order"]', function (e) {
+                jQuery('form.woocommerce-checkout').on('checkout_place_order', function (e) {
+                    var t = e.target;
                     var self = this;
                     var bcSelected = jQuery('#payment_method_blockchyp').is(':checked');
-                    if (bcSelected && !blockchyp_enrolled) {
+                    if (!bcSelected) {
+                        return true
+                    }
+                    var tokenInput = jQuery('#blockchyp_token').val();
+                    if (tokenInput && blockchyp_enrolled) {
+                        return true
+                    }
+                    if (!blockchyp_enrolled) {
                         var tokenInput = jQuery('#blockchyp_token').val();
                         var cardholder = jQuery('#blockchyp_cardholder').val();
                         var postalCode = jQuery('#blockchyp_postalcode')
@@ -162,6 +170,9 @@ function blockchyp_woocommerce_init()
                         if (postalCode) {
                             postalCodeValue = postalCode.val();
                         }
+                        if (tokenInput) {
+                            return true
+                        }
                         if (!tokenInput) {
                             e.preventDefault();
                             var req = {
@@ -171,24 +182,28 @@ function blockchyp_woocommerce_init()
                             if (postalCodeValue) {
                                 req.postalCode = postalCodeValue.split('-')[0];
                             }
-                            blockchyp_enrolled = true
-                            jQuery('form.woocommerce-checkout').off();
                             tokenizer.tokenize('{$this->tokenizing_key}', req)
                             .then(function (response) {
                                 if (response.data.success) {
                                     jQuery('#blockchyp_token').val(response.data.token);
                                     if (!response.data.token) {
+                                        jquery( document.body ).trigger( 'checkout_error' );
                                         blockchyp_enrolled = false
+                                        return
                                     }
-                                    jQuery('button[type="submit"][name="woocommerce_checkout_place_order"]').trigger('click');
+                                    blockchyp_enrolled = true
+                                    jQuery('form.woocommerce-checkout').submit()
                                 }
                             })
                             .catch(function (error) {
-                              blockchyp_enrolled = false
+                              jquery( document.body ).trigger( 'checkout_error' );
+                              blockchyp_enrolled = false;
                               console.log(error);
                             })
                         }
                     }
+
+                    return false
                 });
             </script>
 EOT;
@@ -206,7 +221,7 @@ EOT;
             <div>
               <label class="blockchyp-label">Card Number</label>
               <div id="secure-input"></div>
-              <div id="secure-input-error" class="alert alert-danger" style="display: none;"></div>
+              <div id="secure-input-error" class="alert alert-danger" style="display: none; color: red;"></div>
             </div>
             <div>
               <label class="blockchyp-label">Cardholder Name</label>
@@ -232,6 +247,7 @@ EOT;
          **/
         public function process_payment($order_id)
         {
+
             $testmode = false;
             if ($this->settings['testmode'] == 'yes') {
                 $testmode = true;
@@ -266,6 +282,8 @@ EOT;
 
             try {
                 $response = BlockChyp::charge($request);
+
+                error_log(json_encode($response));
 
                 if (!$response["success"] || !$response["approved"]) {
                     $order->add_order_note(
@@ -392,7 +410,7 @@ EOT;
                     'title' => __('Enable/Disable', 'blockchyp-woocommerce'),
                     'type' => 'checkbox',
                     'label' => __(
-                        'Enable BlockChyp Gateway.',
+                        'Enable BlockChyp Gateway',
                         'blockchyp-woocommerce'
                     ),
                     'default' => 'no',

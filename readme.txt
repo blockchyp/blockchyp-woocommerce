@@ -2,7 +2,7 @@
 Contributors: blockchyp
 Tags: payments
 Requires at least: 4.4
-Tested up to: 5.4
+Tested up to: 5.9.3
 Stable tag: 1.0.5
 Requires PHP: 7.0
 License: MIT License

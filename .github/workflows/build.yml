@@ -15,7 +15,10 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Validate composer
-        run: composer validate
+        uses: php-actions/composer@v6
+        with:
+          command: validate
+          php_version: '7.4'
 
       - name: Cache dependencies
         id: composer-cache
@@ -26,7 +29,14 @@ jobs:
 
       - name: Install dependencies
         if: steps.composer-cache.outputs.cache-hit != 'true'
-        run: composer install --prefer-dist --no-progress --no-suggest
+        uses: php-actions/composer@v6
+        with:
+          php_version: '7.4'
+
+      - name: Set default php version
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
 
       - name: Lint
         run: vendor/friendsofphp/php-cs-fixer/php-cs-fixer fix --dry-run --diff
@@ -41,7 +51,10 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Validate composer
-        run: composer validate
+        uses: php-actions/composer@v6
+        with:
+          command: validate
+          php_version: '7.4'
 
       - name: Clear dependencies
         run: rm -rf vendor
@@ -55,7 +68,9 @@ jobs:
 
       - name: Install dependencies
         if: steps.composer-cache.outputs.cache-hit != 'true'
-        run: composer install --prefer-dist --no-progress --no-suggest --no-dev
+        uses: php-actions/composer@v6
+        with:
+          php_version: '7.4'
 
       - name: Sync to S3
         run: .github/deploy.sh s3

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "83b86903c1268e8041999aaa369ea2f6",
+    "content-hash": "06542fcbc13d881b1b50cc1a60e93797",
     "packages": [
         {
             "name": "blockchyp/blockchyp-php",

@@ -25,7 +25,7 @@ if ( ! defined('ABSPATH') ) {
 	exit();
 }
 
-require_once dirname(__FILE__) . '/vendor/autoload.php';
+require_once('vendor/autoload.php');
 
 use BlockChyp\BlockChyp;
 
@@ -33,7 +33,7 @@ use BlockChyp\BlockChyp;
  * Required minimums and constants
  */
 define('WC_BLOCKCHYP_VERSION', '4.4.0');
-define('WC_BLOCKCHYP_MIN_PHP_VER', '5.6.0');
+define('WC_BLOCKCHYP_MIN_PHP_VER', '7.3');
 define('WC_BLOCKCHYP_MIN_WC_VER', '3.0');
 define('WC_BLOCKCHYP_FUTURE_MIN_WC_VER', '3.0');
 define('WC_BLOCKCHYP_MAIN_FILE', __FILE__);

@@ -60,7 +60,7 @@ function blockchyp_wc_init() {
 
             // Hooks
             add_action('woocommerce_update_options_payment_gateways_' . $this->id, [$this, 'process_admin_options']);
-            // add_action('wp_enqueue_scripts', [$this, 'payment_scripts']);
+            add_action('wp_enqueue_scripts', [$this, 'payment_scripts']);
 
             // This one might not be needed
             // add_action('woocommerce_api_blockchyp_payment', [$this, 'blockchyp_payment_process']);
@@ -176,23 +176,119 @@ function blockchyp_wc_init() {
             ];
         }
 
-        public function payment_fields() {
+        // public function payment_fields() {
+
+        //     ob_start();
+            
+        //     echo '<div class="blockchyp-payment-form">
+        //         <label for="blockchyp-card-number">Card Number</label>
+        //         <input type="text" id="blockchyp-card-number" name="blockchyp-card-number" placeholder="Enter card number">
+                
+        //         <label for="blockchyp-cardholder">Cardholder Name</label>
+        //         <input type="text" id="blockchyp-cardholder" name="blockchyp-cardholder" placeholder="Enter cardholder name">
+                
+        //         <label for="blockchyp-expiration">Expiration Date</label>
+        //         <input type="text" id="blockchyp-expiration" name="blockchyp-expiration" placeholder="MM/YYYY">
+                
+        //         <label for="blockchyp-cvv">CVV</label>
+        //         <input type="text" id="blockchyp-cvv" name="blockchyp-cvv" placeholder="Enter CVV">
+        //     </div>';
+
+        //     ob_end_flush();
+            
+        // }
+
+        public function payment_fields()
+        {
+            ob_start();
+
+            echo <<<EOT
+            <script>
+                var blockchyp_enrolled = false;
+                jQuery(document).ready(function() {
+                    tokenizer.gatewayHost = '{$this->gateway_host}';
+                    tokenizer.testGatewayHost = '{$this->test_gateway_host}';
+                    tokenizer.render('{$this->tokenizing_key}', {$this->testmode}, 'secure-input', options);
+                });
+                jQuery('form.woocommerce-checkout').on('checkout_place_order', function (e) {
+                    var t = e.target;
+                    var self = this;
+                    var bcSelected = jQuery('#payment_method_blockchyp').is(':checked');
+                    if (!bcSelected) {
+                        return true
+                    }
+                    return false
+                });
+            </script>
+            EOT;
+
             ?>
-            <div class="blockchyp-payment-form">
-                <label for="blockchyp-card-number">Card Number</label>
-                <input type="text" id="blockchyp-card-number" name="blockchyp-card-number" placeholder="Enter card number">
-                
-                <label for="blockchyp-cardholder">Cardholder Name</label>
-                <input type="text" id="blockchyp-cardholder" name="blockchyp-cardholder" placeholder="Enter cardholder name">
-                
-                <label for="blockchyp-expiration">Expiration Date</label>
-                <input type="text" id="blockchyp-expiration" name="blockchyp-expiration" placeholder="MM/YYYY">
-                
-                <label for="blockchyp-cvv">CVV</label>
-                <input type="text" id="blockchyp-cvv" name="blockchyp-cvv" placeholder="Enter CVV">
+            <style>
+                .blockchyp-input {
+                    border: 1px solid #ccc;
+                    padding: 3px !important;
+                }
+
+                .blockchyp-label {
+                    display: block;
+                    margin-top: 10px;
+                }
+            </style>
+            <div>
+                <label class="blockchyp-label">Card Number</label>
+                <input class="blockchyp-input" style="width: 100%;" id="blockchyp_card_number" name="blockchyp_card_number"/>
             </div>
+            <div>
+                <label class="blockchyp-label">Cardholder Name</label>
+                <input class="blockchyp-input" style="width: 100%;" id="blockchyp_cardholder" name="blockchyp_cardholder"/>
+                <!-- You can include additional input fields as needed -->
+            </div>
+
             <?php
+            ob_end_flush();
         }
+
+
+        /**
+         * Outputs BlockChyp payment scripts.
+         */
+        public function payment_scripts()
+        {
+            global $wp;
+
+            if ('no' === $this->enabled) {
+                return;
+            }
+
+            $testmode = false;
+            if ($this->settings['testmode'] == 'yes') {
+                $testmode = true;
+            }
+
+            if ($testmode) {
+                wp_register_script(
+                    'blockchyp',
+                    $this->test_gateway_host .
+                        '/static/js/blockchyp-tokenizer-all.min.js',
+                    '',
+                    '1.0.0',
+                    true
+                );
+            } else {
+                wp_register_script(
+                    'blockchyp',
+                    $this->gateway_host .
+                        '/static/js/blockchyp-tokenizer-all.min.js',
+                    '',
+                    '1.0.0',
+                    true
+                );
+            }
+
+            wp_enqueue_script('blockchyp');
+        }
+
+        
         
 
         // public function init_settings() {
@@ -236,17 +332,11 @@ function blockchyp_wc_init() {
             BlockChyp::setTestGatewayHost($this->test_gateway_host);
 
             $request = array(
-                'test' => true,
-                'terminalName' => 'Test Terminal',
                 'amount' => $order->get_total(),
-                // Additional transaction details can be added here as needed
-                // For instance:
-                // 'cardType' => BlockChyp::CARD_TYPE_EBT, // For EBT transactions
-                // 'cashBack' => 10.00, // Enable cash back for debit transactions
-                // 'manualEntry' => true, // Enable manual card entry
-                // 'promptForTip' => true, // Prompt for tips
-                // 'enroll' => true, // Enroll the payment method in the token vault inline
-                // 'cryptocurrency' => 'BTC', // Switch to cryptocurrency screen (e.g., BTC for Bitcoin)
+                'test' => $this->testmode,
+                'transactionRef' => strval($order_id),
+                 // 'token' => $this->token,
+                 // 'address' => $address,
             );
 
             try {

@@ -12,10 +12,21 @@ if (!in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get
 }
 
 // Include BlockChyp PHP SDK
-require_once 'vendor/autoload.php'; // Adjust the path to the autoload.php file
+// require_once dirname(__FILE__) . '/vendor/autoload.php';
+
+require_once('vendor/autoload.php');
 
 // Import BlockChyp namespace
 use BlockChyp\BlockChyp;
+
+
+function declare_cart_checkout_blocks_compatibility() {
+    if (class_exists('\Automattic\WooCommerce\Utilities\FeaturesUtil')) {
+        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('cart_checkout_blocks', __FILE__, true);
+    }
+}
+
+add_action('before_woocommerce_init', 'declare_cart_checkout_blocks_compatibility');
 
 // Initialize BlockChyp payment gateway class
 add_action('plugins_loaded', 'blockchyp_wc_init');
@@ -60,10 +71,10 @@ function blockchyp_wc_init() {
 
             // Hooks
             add_action('woocommerce_update_options_payment_gateways_' . $this->id, [$this, 'process_admin_options']);
-            // add_filter( 'woocommerce_available_payment_gateways', [ $this, 'get_available_payment_gateways' ] );
-            // add_action('wp_enqueue_scripts', [$this, 'payment_scripts']);
 
-            // add_filter('woocommerce_payment_gateways', 'print_available_gateways');
+            // Add a new action to register the payment method using blocks-registry
+            add_action('woocommerce_blocks_loaded', [$this, 'blockchyp_register_payment_method_block']);
+            // add_action('wp_enqueue_scripts', [$this, 'payment_scripts']);
             
             // This one might not be needed
             // add_action('woocommerce_api_blockchyp_payment', [$this, 'blockchyp_payment_process']);
@@ -89,6 +100,21 @@ function blockchyp_wc_init() {
             }
         }
 
+        function blockchyp_register_payment_method_block() {
+            if (! class_exists('\Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType')) {
+                return;
+            }
+
+            require_once plugin_dir_path(__FILE__) . 'class-block.php';
+
+            add_action('woocommerce_blocks_payment_method_type_registration', function (Automattic\WooCommerce\Blocks\Payments\PaymentMethodRegistry $payment_method_registry) {
+                // Create a new instance of the BlockChyp_Gateway_Blocks
+                $payment_method_registry->register(new BlockChyp_Gateway_Blocks());
+            });
+            
+        }
+
+       
        /*
          * Defines the configuration fields needed to setup BlockChyp.
          */
@@ -179,39 +205,34 @@ function blockchyp_wc_init() {
             ];
         }
 
-        
-      
-        function print_available_gateways($available_gateways) {
-            var_dump($available_gateways); // Or use print_r($available_gateways) for a different format
-            // die(); // Optional: Stop execution to view the output directly
-            return $available_gateways;
-        }
-
-        
-
-
-
         public function payment_fields() {
 
             // ob_start();
-            echo 'You have entered the payment fields function';
+            // echo 'You have entered the payment fields function';
             ?>
             <fieldset id="wc-<?php echo esc_attr( $this->id ); ?>-cc-form" class="wc-credit-card-form wc-payment-form" style="background:transparent;">
                 <?php do_action( 'woocommerce_credit_card_form_start', $this->id ); ?>
 
-            <div class="blockchyp-payment-form">
-                <label for="blockchyp-card-number"><?php esc_html_e( 'Card Number', 'woocommerce-gateway-blockchyp' ); ?></label>
-                <input type="text" id="blockchyp-card-number" name="blockchyp-card-number" placeholder="<?php esc_attr_e( 'Enter card number', 'woocommerce-gateway-blockchyp' ); ?>">
-        
-                <label for="blockchyp-cardholder"><?php esc_html_e( 'Cardholder Name', 'woocommerce-gateway-blockchyp' ); ?></label>
-                <input type="text" id="blockchyp-cardholder" name="blockchyp-cardholder" placeholder="<?php esc_attr_e( 'Enter cardholder name', 'woocommerce-gateway-blockchyp' ); ?>">
-        
-                <label for="blockchyp-expiration"><?php esc_html_e( 'Expiration Date', 'woocommerce-gateway-blockchyp' ); ?></label>
-                <input type="text" id="blockchyp-expiration" name="blockchyp-expiration" placeholder="<?php esc_attr_e( 'MM/YYYY', 'woocommerce-gateway-blockchyp' ); ?>">
-        
-                <label for="blockchyp-cvv"><?php esc_html_e( 'CVV', 'woocommerce-gateway-blockchyp' ); ?></label>
-                <input type="text" id="blockchyp-cvv" name="blockchyp-cvv" placeholder="<?php esc_attr_e( 'Enter CVV', 'woocommerce-gateway-blockchyp' ); ?>">
-            </div>
+                <div class="blockchyp-payment-form">
+                    <label for="blockchyp-card-number"><?php esc_html_e( 'Card Number:', 'woocommerce-gateway-blockchyp' ); ?></label>
+                    <input type="text" id="blockchyp-card-number" name="blockchyp-card-number" placeholder="<?php esc_attr_e( 'Enter card number', 'woocommerce-gateway-blockchyp' ); ?>">
+                </div>
+
+                <div class="blockchyp-payment-form">
+                    <label for="blockchyp-cardholder"><?php esc_html_e( 'Cardholder Name:', 'woocommerce-gateway-blockchyp' ); ?></label>
+                    <input type="text" id="blockchyp-cardholder" name="blockchyp-cardholder" placeholder="<?php esc_attr_e( 'Enter cardholder name', 'woocommerce-gateway-blockchyp' ); ?>">
+                </div>
+
+                <div class="blockchyp-payment-form">
+                    <label for="blockchyp-expiration"><?php esc_html_e( 'Expiration Date:', 'woocommerce-gateway-blockchyp' ); ?></label>
+                    <input type="text" id="blockchyp-expiration" name="blockchyp-expiration" placeholder="<?php esc_attr_e( 'MM/YYYY', 'woocommerce-gateway-blockchyp' ); ?>">
+                </div>
+
+                <div class="blockchyp-payment-form">
+                    <label for="blockchyp-cvv"><?php esc_html_e( 'CVV:', 'woocommerce-gateway-blockchyp' ); ?></label>
+                    <input type="text" id="blockchyp-cvv" name="blockchyp-cvv" placeholder="<?php esc_attr_e( 'Enter CVV', 'woocommerce-gateway-blockchyp' ); ?>">
+                </div>
+
              <?php do_action( 'woocommerce_credit_card_form_end', $this->id ); ?>
              <?php
             // ob_end_flush();
@@ -224,7 +245,7 @@ function blockchyp_wc_init() {
          **/
         public function process_payment($order_id) {
             global $woocommerce;
-            $order = new WC_Order($order_id);
+            $order = wc_get_order($order_id);
 
             // Process payment using BlockChyp SDK
             BlockChyp::setApiKey($this->api_key);

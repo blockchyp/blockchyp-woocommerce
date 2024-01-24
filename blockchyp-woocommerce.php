@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: BlockChyp Payment Gateway for WooCommerce
-Description: Integrates BlockChyp payment gateway with WooCommerce.
+Description: Integrates BlockChyp Payment Gateway with WooCommerce.
 Version: 2.0
 */
 
@@ -31,6 +31,10 @@ add_action('before_woocommerce_init', 'declare_cart_checkout_blocks_compatibilit
 // Initialize BlockChyp payment gateway class
 add_action('plugins_loaded', 'blockchyp_wc_init');
 function blockchyp_wc_init() {
+    if (!class_exists('WC_Payment_Gateway')) {
+        return;
+    }
+
     class WC_BlockChyp_Gateway extends WC_Payment_Gateway {
         private $testmode;
         private $api_key;
@@ -44,7 +48,7 @@ function blockchyp_wc_init() {
             $this->id = 'blockchyp';
             $this->method_title = 'BlockChyp';
             $this->title = 'BlockChyp Payment Gateway';
-            $this->method_description = 'Connects your WooCommerce store with the BlockChyp gateway.';
+            $this->method_description = 'Connects your WooCommerce store with the BlockChyp Gateway.';
             $this->has_fields = true;
             
             //Initialize Form Fields
@@ -101,15 +105,15 @@ function blockchyp_wc_init() {
         }
 
         function blockchyp_register_payment_method_block() {
-            if (! class_exists('\Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType')) {
+            if (!class_exists('\Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType')) {
                 return;
             }
 
-            require_once plugin_dir_path(__FILE__) . 'class-block.php';
+            require_once plugin_dir_path(__FILE__) . 'class-wc-blockchyp-blocks-support.php';
 
             add_action('woocommerce_blocks_payment_method_type_registration', function (Automattic\WooCommerce\Blocks\Payments\PaymentMethodRegistry $payment_method_registry) {
-                // Create a new instance of the BlockChyp_Gateway_Blocks
-                $payment_method_registry->register(new BlockChyp_Gateway_Blocks());
+                // Create a new instance of the WC_BlockChyp_Blocks_Support
+                $payment_method_registry->register(new WC_BlockChyp_Blocks_Support());
             });
             
         }

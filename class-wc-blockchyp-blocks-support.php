@@ -17,7 +17,7 @@ final class WC_BlockChyp_Blocks_Support extends AbstractPaymentMethodType {
     }
 
     public function get_payment_method_script_handles() {
-        wp_enqueue_script('blockchyp-gateway-blocks-integration', plugin_dir_url(__FILE__) . 'checkout.js', ['wc-blocks-registry', 'wc-settings', 'wp-element', 'wp-html-entities', 'wp-i18n'], null, true);
+        wp_register_script('blockchyp-gateway-blocks-integration', plugin_dir_url(__FILE__) . 'checkout.js', ['wc-blocks-registry', 'wc-settings', 'wp-element', 'wp-html-entities', 'wp-i18n'], null, true);
 
         if ( function_exists( 'wp_set_script_translations' ) ) {
             wp_set_script_translations( 'blockchyp-gateway-blocks-integration' );

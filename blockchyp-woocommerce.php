@@ -19,7 +19,6 @@ require_once('vendor/autoload.php');
 // Import BlockChyp namespace
 use BlockChyp\BlockChyp;
 
-
 function declare_cart_checkout_blocks_compatibility() {
     if (class_exists('\Automattic\WooCommerce\Utilities\FeaturesUtil')) {
         \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('cart_checkout_blocks', __FILE__, true);
@@ -29,11 +28,13 @@ function declare_cart_checkout_blocks_compatibility() {
 add_action('before_woocommerce_init', 'declare_cart_checkout_blocks_compatibility');
 
 // Initialize BlockChyp payment gateway class
-add_action('plugins_loaded', 'blockchyp_wc_init');
+add_action('plugins_loaded', 'blockchyp_wc_init', 0);
 function blockchyp_wc_init() {
     if (!class_exists('WC_Payment_Gateway')) {
         return;
     }
+
+    // include(plugin_dir_path(__FILE__) . 'blockchyp-woocommerce.php');
 
     class WC_BlockChyp_Gateway extends WC_Payment_Gateway {
         private $testmode;
@@ -74,14 +75,12 @@ function blockchyp_wc_init() {
         
 
             // Hooks
-            add_action('woocommerce_update_options_payment_gateways_' . $this->id, [$this, 'process_admin_options']);
+            add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
 
             // Add a new action to register the payment method using blocks-registry
             add_action('woocommerce_blocks_loaded', [$this, 'blockchyp_register_payment_method_block']);
-            // add_action('wp_enqueue_scripts', [$this, 'payment_scripts']);
             
-            // This one might not be needed
-            // add_action('woocommerce_api_blockchyp_payment', [$this, 'blockchyp_payment_process']);
+            add_action('wp_enqueue_scripts', [$this, 'payment_scripts']);
 
         }
 
@@ -113,7 +112,7 @@ function blockchyp_wc_init() {
 
             add_action('woocommerce_blocks_payment_method_type_registration', function (Automattic\WooCommerce\Blocks\Payments\PaymentMethodRegistry $payment_method_registry) {
                 // Create a new instance of the WC_BlockChyp_Blocks_Support
-                $payment_method_registry->register(new WC_BlockChyp_Blocks_Support());
+                $payment_method_registry->register(new WC_BlockChyp_Blocks_Support );
             });
             
         }
@@ -243,6 +242,45 @@ function blockchyp_wc_init() {
         }
         
         /**
+        * Outputs BlockChyp payment scripts.
+        */
+       public function payment_scripts()
+       {
+           global $wp;
+
+           if ('no' === $this->enabled) {
+               return;
+           }
+
+           $testmode = false;
+           if ($this->settings['testmode'] == 'yes') {
+               $testmode = true;
+           }
+
+           if ($testmode) {
+               wp_register_script(
+                   'blockchyp',
+                   $this->test_gateway_host .
+                       '/static/js/blockchyp-tokenizer-all.min.js',
+                   '',
+                   '1.0.0',
+                   true
+               );
+           } else {
+               wp_register_script(
+                   'blockchyp',
+                   $this->gateway_host .
+                       '/static/js/blockchyp-tokenizer-all.min.js',
+                   '',
+                   '1.0.0',
+                   true
+               );
+           }
+
+           wp_enqueue_script('blockchyp');
+       }
+        
+        /**
          * Process a BlockChyp charge.
          * @param int $order_id
          * @return array
@@ -251,6 +289,8 @@ function blockchyp_wc_init() {
             global $woocommerce;
             $order = wc_get_order($order_id);
 
+            echo $order;
+
             // Process payment using BlockChyp SDK
             BlockChyp::setApiKey($this->api_key);
             BlockChyp::setBearerToken($this->bearer_token);
@@ -258,9 +298,10 @@ function blockchyp_wc_init() {
             BlockChyp::setGatewayHost($this->gateway_host);
             BlockChyp::setTestGatewayHost($this->test_gateway_host);
 
+
             $address = sanitize_text_field($_POST['billing_address_1']);
             $postcode = sanitize_text_field($_POST['billing_postcode']);
-            $token = sanitize_text_field($_POST['blockchyp_token']);
+            $token = sanitize_text_field($_POST['tokenizing_key']);
             //$total = $woocommerce->cart->total;
 
             $request = [
@@ -272,10 +313,15 @@ function blockchyp_wc_init() {
                 'transactionRef' => strval($order_id),
             ];
 
+            echo $request['amount'];
+
             try {
                 // Process payment using BlockChyp SDK
                 $response = BlockChyp::charge($request);
-        
+
+                //Log the response
+                error_log(print_r($response, true));
+            
                 // Handle payment response
                 if ($response['approved']) {
                     $order->payment_complete();
@@ -288,14 +334,16 @@ function blockchyp_wc_init() {
                     // Handle failed payment
                     wc_add_notice('Payment failed: ' . $response['responseDescription'], 'error');
                     return array(
-                        'result' => 'failed' + $response['responseDescription'],
+                        'result' => 'failed' . $response['responseDescription'],
+                        'redirect' => $this->get_return_url($order)
                     );
                 }
             } catch (Exception $e) {
                 // Handle exceptions or errors during payment processing
                 wc_add_notice('Payment failed: ' . $e->getMessage(), 'error');
                 return array(
-                    'result' => 'failed' + $e->getMessage(),
+                    'result' => 'failed' . $e->getMessage(),
+                    'redirect' => $this->get_return_url($order)
                 );
             }
         }
@@ -349,9 +397,9 @@ function blockchyp_wc_init() {
     }
 
     // Register the gateway with WooCommerce
+    add_filter('woocommerce_payment_gateways', 'woocommerce_add_blockchyp');
     function woocommerce_add_blockchyp($methods) {
         $methods[] = 'WC_BlockChyp_Gateway';
         return $methods;
     }
-    add_filter('woocommerce_payment_gateways', 'woocommerce_add_blockchyp');
 }

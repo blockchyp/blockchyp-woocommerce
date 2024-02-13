@@ -18,7 +18,7 @@ jobs:
         uses: php-actions/composer@v6
         with:
           command: validate
-          php_version: '7.4'
+          php_version: '8.1'
 
       - name: Cache dependencies
         id: composer-cache
@@ -31,12 +31,12 @@ jobs:
         if: steps.composer-cache.outputs.cache-hit != 'true'
         uses: php-actions/composer@v6
         with:
-          php_version: '7.4'
+          php_version: '8.1'
 
       - name: Set default php version
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '7.4'
+          php-version: '8.1'
 
       - name: Lint
         run: vendor/friendsofphp/php-cs-fixer/php-cs-fixer fix --dry-run --diff
@@ -54,7 +54,7 @@ jobs:
         uses: php-actions/composer@v6
         with:
           command: validate
-          php_version: '7.4'
+          php_version: '8.1'
 
       - name: Clear dependencies
         run: rm -rf vendor
@@ -70,7 +70,7 @@ jobs:
         if: steps.composer-cache.outputs.cache-hit != 'true'
         uses: php-actions/composer@v6
         with:
-          php_version: '7.4'
+          php_version: '8.1'
 
       - name: Sync to S3
         run: .github/deploy.sh s3

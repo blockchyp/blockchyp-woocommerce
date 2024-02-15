@@ -19,7 +19,8 @@ require_once('vendor/autoload.php');
 // Import BlockChyp namespace
 use BlockChyp\BlockChyp;
 
-function declare_cart_checkout_blocks_compatibility() {
+function declare_cart_checkout_blocks_compatibility()
+{
     if (class_exists('\Automattic\WooCommerce\Utilities\FeaturesUtil')) {
         \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('cart_checkout_blocks', __FILE__, true);
     }
@@ -29,14 +30,16 @@ add_action('before_woocommerce_init', 'declare_cart_checkout_blocks_compatibilit
 
 // Initialize BlockChyp payment gateway class
 add_action('plugins_loaded', 'blockchyp_wc_init', 0);
-function blockchyp_wc_init() {
+function blockchyp_wc_init()
+{
     if (!class_exists('WC_Payment_Gateway')) {
         return;
     }
 
     // include(plugin_dir_path(__FILE__) . 'blockchyp-woocommerce.php');
 
-    class WC_BlockChyp_Gateway extends WC_Payment_Gateway {
+    class WC_BlockChyp_Gateway extends WC_Payment_Gateway
+    {
         private $testmode;
         private $api_key;
         private $bearer_token;
@@ -45,13 +48,14 @@ function blockchyp_wc_init() {
         private $gateway_host;
         private $test_gateway_host;
 
-        public function __construct() {
+        public function __construct()
+        {
             $this->id = 'blockchyp';
             $this->method_title = 'BlockChyp';
             $this->title = 'BlockChyp Payment Gateway';
             $this->method_description = 'Connects your WooCommerce store with the BlockChyp Gateway.';
             $this->has_fields = true;
-            
+
             //Initialize Form Fields
             $this->init_form_fields();
             $this->init_settings();
@@ -65,26 +69,23 @@ function blockchyp_wc_init() {
             $this->tokenizing_key = $this->settings['tokenizing_key'];
             $this->gateway_host = $this->settings['gateway_host'];
             $this->test_gateway_host = $this->settings['test_gateway_host'];
-            
+
             $this->supports = ['products', 'refunds', 'tokenization', 'add_payment_method'];
-            // 'preorders'???
-            // 'default_credit_card_form'
 
             // Print out settings
             // $this->print_settings();
-        
 
             // Hooks
             add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
 
             // Add a new action to register the payment method using blocks-registry
             add_action('woocommerce_blocks_loaded', [$this, 'blockchyp_register_payment_method_block']);
-            
-            add_action('wp_enqueue_scripts', [$this, 'payment_scripts']);
 
+            add_action('wp_enqueue_scripts', [$this, 'payment_scripts']);
         }
 
-        public function print_settings() {
+        public function print_settings()
+        {
             // Array containing all the settings
             $settings = [
                 'enabled' => $this->enabled,
@@ -96,14 +97,15 @@ function blockchyp_wc_init() {
                 'gateway_host' => $this->gateway_host,
                 'test_gateway_host' => $this->test_gateway_host,
             ];
-        
+
             // Print settings
             foreach ($settings as $key => $value) {
                 echo $key . ': ' . $value . '<br>';
             }
         }
 
-        function blockchyp_register_payment_method_block() {
+        function blockchyp_register_payment_method_block()
+        {
             if (!class_exists('\Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType')) {
                 return;
             }
@@ -112,13 +114,12 @@ function blockchyp_wc_init() {
 
             add_action('woocommerce_blocks_payment_method_type_registration', function (Automattic\WooCommerce\Blocks\Payments\PaymentMethodRegistry $payment_method_registry) {
                 // Create a new instance of the WC_BlockChyp_Blocks_Support
-                $payment_method_registry->register(new WC_BlockChyp_Blocks_Support );
+                $payment_method_registry->register(new WC_BlockChyp_Blocks_Support);
             });
-            
         }
 
-       
-       /*
+
+        /*
          * Defines the configuration fields needed to setup BlockChyp.
          */
         public function init_form_fields()
@@ -133,7 +134,7 @@ function blockchyp_wc_init() {
                     ),
                     'default' => 'yes',
                     'description' =>
-                        'Include BlockChyp as a WooCommerce payment option.',
+                    'Include BlockChyp as a WooCommerce payment option.',
                 ],
                 'testmode' => [
                     'title' => __('Test Mode', 'blockchyp-woocommerce'),
@@ -193,99 +194,222 @@ function blockchyp_wc_init() {
                     'desc_tip' => true,
                     'description' => __('BlockChyp Test Gateway'),
                 ],
-                // 'render_postalcode' => [
-                //     'title' => __('Postal Code Field', 'blockchyp-woocommerce'),
-                //     'type' => 'checkbox',
-                //     'label' => __(
-                //         'Add Postal Code Field',
-                //         'blockchyp-woocommerce'
-                //     ),
-                //     'default' => 'no',
-                //     'description' => __(
-                //         'If your checkout page doesn\'t include a billing address, check this box to add a billing postal code to the payment page'
-                //     ),
-                // ],
+                'render_postalcode' => [
+                    'title' => __('Postal Code Field', 'blockchyp-woocommerce'),
+                    'type' => 'checkbox',
+                    'label' => __(
+                        'Add Postal Code Field',
+                        'blockchyp-woocommerce'
+                    ),
+                    'default' => 'no',
+                    'description' => __(
+                        'If your checkout page doesn\'t include a billing address, check this box to add a billing postal code to the payment page'
+                    ),
+                ],
             ];
         }
 
-        public function payment_fields() {
+        public function payment_fields()
+        {
+            ob_start();
 
-            // ob_start();
-            // echo 'You have entered the payment fields function';
-            ?>
-            <fieldset id="wc-<?php echo esc_attr( $this->id ); ?>-cc-form" class="wc-credit-card-form wc-payment-form" style="background:transparent;">
-                <?php do_action( 'woocommerce_credit_card_form_start', $this->id ); ?>
+            $this->render_blockchyp_tokenizer_scripts();
+            $this->render_payment_block_styling();
 
-                <div class="blockchyp-payment-form">
-                    <label for="blockchyp-card-number"><?php esc_html_e( 'Card Number:', 'woocommerce-gateway-blockchyp' ); ?></label>
-                    <input type="text" id="blockchyp-card-number" name="blockchyp-card-number" placeholder="<?php esc_attr_e( 'Enter card number', 'woocommerce-gateway-blockchyp' ); ?>">
-                </div>
+            $this->render_payment_block();
 
-                <div class="blockchyp-payment-form">
-                    <label for="blockchyp-cardholder"><?php esc_html_e( 'Cardholder Name:', 'woocommerce-gateway-blockchyp' ); ?></label>
-                    <input type="text" id="blockchyp-cardholder" name="blockchyp-cardholder" placeholder="<?php esc_attr_e( 'Enter cardholder name', 'woocommerce-gateway-blockchyp' ); ?>">
-                </div>
+            // Render optional postal code field
+            if ($this->settings['render_postalcode'] == 'yes') {
+                $this->render_postal_code_field();
+            }
 
-                <div class="blockchyp-payment-form">
-                    <label for="blockchyp-expiration"><?php esc_html_e( 'Expiration Date:', 'woocommerce-gateway-blockchyp' ); ?></label>
-                    <input type="text" id="blockchyp-expiration" name="blockchyp-expiration" placeholder="<?php esc_attr_e( 'MM/YYYY', 'woocommerce-gateway-blockchyp' ); ?>">
-                </div>
-
-                <div class="blockchyp-payment-form">
-                    <label for="blockchyp-cvv"><?php esc_html_e( 'CVV:', 'woocommerce-gateway-blockchyp' ); ?></label>
-                    <input type="text" id="blockchyp-cvv" name="blockchyp-cvv" placeholder="<?php esc_attr_e( 'Enter CVV', 'woocommerce-gateway-blockchyp' ); ?>">
-                </div>
-
-             <?php do_action( 'woocommerce_credit_card_form_end', $this->id ); ?>
-             <?php
-            // ob_end_flush();
+            ob_end_flush();
         }
-        
+
         /**
-        * Outputs BlockChyp payment scripts.
-        */
-       public function payment_scripts()
-       {
-           global $wp;
+         * Render BlockChyp JavaScript.
+         */
+        private function render_blockchyp_tokenizer_scripts()
+        {
+            $testmode = $this->settings['testmode'] == 'yes' ? 'true' : 'false';
 
-           if ('no' === $this->enabled) {
-               return;
-           }
+            echo <<<EOT
+                <script>
+                    var blockchyp_enrolled = false;
+                    jQuery(document).ready(function() {
+                        var options = {
+                            postalCode: false
+                        };
+                        tokenizer.gatewayHost = '{$this->gateway_host}';
+                        tokenizer.testGatewayHost = '{$this->test_gateway_host}';
+                        tokenizer.render('{$this->tokenizing_key}', $testmode, 'secure-input', options);
+                    });
+                    jQuery('form.woocommerce-checkout').on('checkout_place_order', function (e) {
+                        var t = e.target;
+                        var self = this;
+                        var bcSelected = jQuery('#payment_method_blockchyp').is(':checked');
+                        if (!bcSelected) {
+                            console.log('BlockChyp not selected');
+                            return true
+                        }
+                        var tokenInput = jQuery('#blockchyp_token').val();
+                        console.log('Token Input: ', tokenInput);
+                        if (tokenInput && blockchyp_enrolled) {
+                            return true
+                        }
+                        console.log('BlockChyp Enrolled:', blockchyp_enrolled);
+                        if (!blockchyp_enrolled) {
+                            var tokenInput = jQuery('#blockchyp_token').val();
+                            var cardholder = jQuery('#blockchyp_cardholder').val();
+                            var postalCode = jQuery('#blockchyp_postalcode')
+                            var postalCodeValue = '';
+                            if (!postalCode) {
+                                postalCode = jQuery('#billing_postcode')
+                            }
+                            if (postalCode) {
+                                postalCodeValue = postalCode.val();
+                            }
+                            if (tokenInput) {
+                                return true
+                            }
+                            if (!tokenInput) {
+                                e.preventDefault();
+                                var req = {
+                                    test: {$testmode},
+                                    cardholderName: cardholder
+                                }
+                                if (postalCodeValue) {
+                                    req.postalCode = postalCodeValue.split('-')[0];
+                                }
+                                tokenizer.tokenize('{$this->tokenizing_key}', req)
+                                .then(function (response) {
+                                    if (response.data.success) {
+                                        jQuery('#blockchyp_token').val(response.data.token);
+                                        if (!response.data.token) {
+                                            jquery( document.body ).trigger( 'checkout_error' );
+                                            blockchyp_enrolled = false
+                                            return
+                                        }
+                                        blockchyp_enrolled = true
+                                        jQuery('form.woocommerce-checkout').submit()
+                                    }
+                                })
+                                .catch(function (error) {
+                                    jquery( document.body ).trigger( 'checkout_error' );
+                                    blockchyp_enrolled = false;
+                                    console.log(error);
+                                })
+                            }
+                        }
 
-           $testmode = false;
-           if ($this->settings['testmode'] == 'yes') {
-               $testmode = true;
-           }
+                        return false
+                    });
+                </script>
+            EOT;
+        }
 
-           if ($testmode) {
-               wp_register_script(
-                   'blockchyp',
-                   $this->test_gateway_host .
-                       '/static/js/blockchyp-tokenizer-all.min.js',
-                   '',
-                   '1.0.0',
-                   true
-               );
-           } else {
-               wp_register_script(
-                   'blockchyp',
-                   $this->gateway_host .
-                       '/static/js/blockchyp-tokenizer-all.min.js',
-                   '',
-                   '1.0.0',
-                   true
-               );
-           }
+        /**
+         * Render BlockChyp CSS.
+         */
+        private function render_payment_block_styling()
+        {
+            echo <<<EOT
+                <style>
+                    .blockchyp-input {
+                        border: 1px solid #ccc;
+                        padding: 3px !important;
+                    }
+                    .blockchyp-label {
+                        display: block;
+                        margin-top: 10px;
+                    }
+                </style>
+            EOT;
+        }
 
-           wp_enqueue_script('blockchyp');
-       }
-        
+        /**
+         * Render card input fields.
+         */
+        private function render_payment_block()
+        {
+            echo <<<EOT
+                <div>
+                    <label class="blockchyp-label">Card Number</label>
+                    <div id="secure-input"></div>
+                    <div id="secure-input-error" class="alert alert-danger" style="display: none; color: red;"></div>
+                </div>
+                <div>
+                    <label class="blockchyp-label">Cardholder Name</label>
+                    <input class="blockchyp-input" style="width: 100%;" id="blockchyp_cardholder" name="blockchyp_cardholder"/>
+                    <input type="hidden" id="blockchyp_token" name="blockchyp_token"/>
+                </div>
+            EOT;
+        }
+
+        /**
+         * Render optional postal code field.
+         */
+        private function render_postal_code_field()
+        {
+            echo <<<EOT
+                <div>
+                    <label class="blockchyp-label">Postal Code</label>
+                    <input class="blockchyp-input" style="width: 100%;" maxlength="5" id="blockchyp_postalcode" name="blockchyp_postalcode"/>
+                </div>
+            EOT;
+        }
+
+
+
+
+
+
+        /**
+         * Outputs BlockChyp payment scripts.
+         */
+        public function payment_scripts()
+        {
+            // global $wp;
+
+            // if ('no' === $this->enabled) {
+            //     return;
+            // }
+
+            // $testmode = false;
+            // if ($this->settings['testmode'] == 'yes') {
+            //     $testmode = true;
+            // }
+
+            if ($this -> testmode) {
+                wp_register_script(
+                    'blockchyp',
+                    $this->test_gateway_host .
+                        '/static/js/blockchyp-tokenizer-all.min.js',
+                    array(),
+                    '1.0.0',
+                    true
+                );
+            } else {
+                wp_register_script(
+                    'blockchyp',
+                    $this->gateway_host .
+                        '/static/js/blockchyp-tokenizer-all.min.js',
+                    array(),
+                    '1.0.0',
+                    true
+                );
+            }
+
+            wp_enqueue_script('blockchyp');
+        }
+
         /**
          * Process a BlockChyp charge.
          * @param int $order_id
          * @return array
          **/
-        public function process_payment($order_id) {
+        public function process_payment($order_id)
+        {
             global $woocommerce;
             $order = wc_get_order($order_id);
 
@@ -321,7 +445,7 @@ function blockchyp_wc_init() {
 
                 //Log the response
                 error_log(print_r($response, true));
-            
+
                 // Handle payment response
                 if ($response['approved']) {
                     $order->payment_complete();
@@ -348,35 +472,36 @@ function blockchyp_wc_init() {
             }
         }
 
-         /**
+        /**
          * Process a BlockChyp refund.
          * @param int $order_id
          * @param float $amount
          * @param string $reason
          * @return boolean
          **/
-        public function process_refund($order_id, $amount = null, $reason = '') {
+        public function process_refund($order_id, $amount = null, $reason = '')
+        {
             global $woocommerce;
             $order = wc_get_order($order_id);
             $transaction_id = $order->transaction_id;
-        
+
             BlockChyp::setApiKey($this->api_key);
             BlockChyp::setBearerToken($this->bearer_token);
             BlockChyp::setSigningKey($this->signing_key);
-        
+
             $request = [
                 'transactionId' => $transaction_id,
-                'test' =>$this->testmode,
+                'test' => $this->testmode,
             ];
-        
+
             // Check if an amount is provided for a partial refund
             if ($amount !== null) {
                 $request['amount'] = $amount;
             }
-        
+
             try {
                 $response = BlockChyp::refund($request);
-        
+
                 // Handle refund response
                 if ($response['approved']) {
                     // For example:
@@ -390,15 +515,15 @@ function blockchyp_wc_init() {
             } catch (Exception $e) {
                 // Handle exceptions or errors during refund processing
                 wc_add_notice('Refund failed: ' . $e->getMessage(), 'error');
-               return false;
+                return false;
             }
         }
-        
     }
 
     // Register the gateway with WooCommerce
     add_filter('woocommerce_payment_gateways', 'woocommerce_add_blockchyp');
-    function woocommerce_add_blockchyp($methods) {
+    function woocommerce_add_blockchyp($methods)
+    {
         $methods[] = 'WC_BlockChyp_Gateway';
         return $methods;
     }

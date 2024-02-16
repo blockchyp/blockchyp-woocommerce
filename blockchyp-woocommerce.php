@@ -242,22 +242,19 @@ function blockchyp_wc_init()
                         };
                         tokenizer.gatewayHost = '{$this->gateway_host}';
                         tokenizer.testGatewayHost = '{$this->test_gateway_host}';
-                        tokenizer.render('{$this->tokenizing_key}', $testmode, 'secure-input', options);
+                        tokenizer.render('{$this->tokenizing_key}', {$testmode}, 'secure-input', options);
                     });
                     jQuery('form.woocommerce-checkout').on('checkout_place_order', function (e) {
                         var t = e.target;
                         var self = this;
                         var bcSelected = jQuery('#payment_method_blockchyp').is(':checked');
                         if (!bcSelected) {
-                            console.log('BlockChyp not selected');
                             return true
                         }
                         var tokenInput = jQuery('#blockchyp_token').val();
-                        console.log('Token Input: ', tokenInput);
                         if (tokenInput && blockchyp_enrolled) {
                             return true
                         }
-                        console.log('BlockChyp Enrolled:', blockchyp_enrolled);
                         if (!blockchyp_enrolled) {
                             var tokenInput = jQuery('#blockchyp_token').val();
                             var cardholder = jQuery('#blockchyp_cardholder').val();
@@ -359,28 +356,23 @@ function blockchyp_wc_init()
             EOT;
         }
 
-
-
-
-
-
         /**
          * Outputs BlockChyp payment scripts.
          */
         public function payment_scripts()
         {
-            // global $wp;
+            global $wp;
 
-            // if ('no' === $this->enabled) {
-            //     return;
-            // }
+            if ('no' === $this->enabled) {
+                return;
+            }
 
-            // $testmode = false;
-            // if ($this->settings['testmode'] == 'yes') {
-            //     $testmode = true;
-            // }
+            $testmode = false;
+            if ($this->settings['testmode'] == 'yes') {
+                $testmode = true;
+            }
 
-            if ($this -> testmode) {
+            if ($testmode) {
                 wp_register_script(
                     'blockchyp',
                     $this->test_gateway_host .
@@ -410,46 +402,71 @@ function blockchyp_wc_init()
          **/
         public function process_payment($order_id)
         {
+
+            $testmode = false;
+            if ($this->settings['testmode'] == 'yes') {
+                $testmode = true;
+            }
+
             global $woocommerce;
-            $order = wc_get_order($order_id);
+            $order = new WC_Order($order_id);
 
-            echo $order;
+            $user = wp_get_current_user();
+            $address = sanitize_text_field($_POST['billing_address_1']);
+            $postcode = sanitize_text_field($_POST['billing_postcode']);
+            $cardholder = sanitize_text_field($_POST['blockchyp_cardholder']);
+            $token = sanitize_text_field($_POST['blockchyp_token']);
+            $total = $woocommerce->cart->total;
 
-            // Process payment using BlockChyp SDK
             BlockChyp::setApiKey($this->api_key);
             BlockChyp::setBearerToken($this->bearer_token);
             BlockChyp::setSigningKey($this->signing_key);
             BlockChyp::setGatewayHost($this->gateway_host);
             BlockChyp::setTestGatewayHost($this->test_gateway_host);
 
-
-            $address = sanitize_text_field($_POST['billing_address_1']);
-            $postcode = sanitize_text_field($_POST['billing_postcode']);
-            $token = sanitize_text_field($_POST['tokenizing_key']);
-            //$total = $woocommerce->cart->total;
-
             $request = [
                 'token' => $token,
-                'amount' => $order->get_total(),
-                'test' => $this->testmode,
+                'amount' => $total,
+                'test' => $testmode,
                 'postalCode' => $postcode,
                 'address' => $address,
                 'transactionRef' => strval($order_id),
             ];
 
-            echo $request['amount'];
+            $response = [];
 
             try {
                 // Process payment using BlockChyp SDK
                 $response = BlockChyp::charge($request);
+                echo $response;
 
                 //Log the response
                 error_log(print_r($response, true));
 
                 // Handle payment response
-                if ($response['approved']) {
+                if ($response['approved'] || $response['success']) {
                     $order->payment_complete();
                     $woocommerce->cart->empty_cart();
+
+                    $transaction_id = $response["transactionId"];
+                    $order->payment_complete($transaction_id);
+                    $message = sprintf(
+                        'BlockChyp payment successful.<br/>'
+                                . 'Transaction ID: %s<br/>'
+                                . 'Auth Code: %s<br/>'
+                                . 'Payment Type: %s (%s)<br/>'
+                                . 'AVS Response: %s<br/>'
+                                . 'Authorized Amount: %s',
+                        $response["transactionId"],
+                        $response["authCode"],
+                        $response["paymentType"],
+                        $response["maskedPan"],
+                        $response["avsResponse"],
+                        $response["authorizedAmount"]
+                    );
+
+                    $order->add_order_note($message);
+                    
                     return array(
                         'result' => 'success',
                         'redirect' => $this->get_return_url($order)

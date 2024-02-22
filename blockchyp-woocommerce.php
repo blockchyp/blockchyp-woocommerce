@@ -409,7 +409,8 @@ function blockchyp_wc_init()
             }
 
             global $woocommerce;
-            $order = new WC_Order($order_id);
+            // $order = new WC_Order($order_id);
+            $order = wc_get_order($order_id);
 
             $user = wp_get_current_user();
             $address = sanitize_text_field($_POST['billing_address_1']);
@@ -445,11 +446,9 @@ function blockchyp_wc_init()
 
                 // Handle payment response
                 if ($response['approved'] || $response['success']) {
-                    $order->payment_complete();
+                    $order->payment_complete($response["transactionId"]);
                     $woocommerce->cart->empty_cart();
 
-                    $transaction_id = $response["transactionId"];
-                    $order->payment_complete($transaction_id);
                     $message = sprintf(
                         'BlockChyp payment successful.<br/>'
                                 . 'Transaction ID: %s<br/>'
@@ -465,6 +464,8 @@ function blockchyp_wc_init()
                         $response["authorizedAmount"]
                     );
 
+                    // Might want to update the status to completed over pending???
+                    $order->update_status('completed');
                     $order->add_order_note($message);
                     
                     return array(
@@ -502,36 +503,48 @@ function blockchyp_wc_init()
             $order = wc_get_order($order_id);
             $transaction_id = $order->transaction_id;
 
+            $testmode = false;
+            if ($this->settings['testmode'] == 'yes') {
+                $testmode = true;
+            }
+
+            error_log("OrderId: " . $order_id);
+            error_log("Amount: " . $amount);
+            error_log("Reason: " . $reason);
+            error_log("Transaction ID: " . $transaction_id);
+            error_log("Order: " . $order);
+
+
             BlockChyp::setApiKey($this->api_key);
             BlockChyp::setBearerToken($this->bearer_token);
             BlockChyp::setSigningKey($this->signing_key);
+            BlockChyp::setGatewayHost($this->gateway_host);
+            BlockChyp::setTestGatewayHost($this->test_gateway_host);
 
             $request = [
                 'transactionId' => $transaction_id,
-                'test' => $this->testmode,
+                'amount' => $amount,
+                'test' => $testmode,
             ];
-
-            // Check if an amount is provided for a partial refund
-            if ($amount !== null) {
-                $request['amount'] = $amount;
-            }
 
             try {
                 $response = BlockChyp::refund($request);
 
                 // Handle refund response
                 if ($response['approved']) {
-                    // For example:
                     $order->update_status('refunded', __('Payment refunded via BlockChyp.', 'your-text-domain'));
+                    $order->add_order_note(sprintf( "BlockChyp refund approved.<br/>Amount: %s<br/>Auth Code: %s", $amount, $response["authCode"]));
                     return true;
                 } else {
                     // Handle failed refund
                     wc_add_notice('Refund failed: ' . $response['responseDescription'], 'error');
+                    $order->add_order_note(sprintf( "BlockChyp refund failed.<br/>Response Description: %s", $response["responseDescription"]));
                     return false;
                 }
             } catch (Exception $e) {
                 // Handle exceptions or errors during refund processing
                 wc_add_notice('Refund failed: ' . $e->getMessage(), 'error');
+                $order->add_order_note(sprintf( "BlockChyp refund failed.<br/>Error: %s", $e->getMessage()));
                 return false;
             }
         }

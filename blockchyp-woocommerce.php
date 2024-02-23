@@ -434,19 +434,30 @@ function blockchyp_wc_init()
                 'transactionRef' => strval($order_id),
             ];
 
-            $response = [];
+            // $response = [];
 
             try {
                 // Process payment using BlockChyp SDK
                 $response = BlockChyp::charge($request);
-                echo $response;
+                // echo $response;
 
                 //Log the response
                 error_log(print_r($response, true));
 
                 // Handle payment response
                 if ($response['approved'] || $response['success']) {
-                    $order->payment_complete($response["transactionId"]);
+                    if(isset($response["transactionId"])) {
+                        $transactionId = $response["transactionId"];
+                    } else {
+                        // Handle the case where transactionId is not set in the response
+                        wc_add_notice('Transaction ID not found in the payment response.', 'error');
+                        return array(
+                            'result' => 'failed' . $response['responseDescription'],
+                            'redirect' => $this->get_return_url($order)
+                        );
+                    }
+
+                    $order->payment_complete($transactionId);
                     $woocommerce->cart->empty_cart();
 
                     $message = sprintf(
@@ -464,8 +475,8 @@ function blockchyp_wc_init()
                         $response["authorizedAmount"]
                     );
 
-                    // Might want to update the status to completed over pending???
-                    $order->update_status('completed');
+                    // Might want to update the status to completed over processing???
+                    // $order->update_status('completed');
                     $order->add_order_note($message);
                     
                     return array(

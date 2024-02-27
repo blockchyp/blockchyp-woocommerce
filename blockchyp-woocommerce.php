@@ -1,24 +1,86 @@
 <?php
 /*
-Plugin Name: BlockChyp Payment Gateway for WooCommerce
+Plugin Name: BlockChyp for WooCommerce
+Plugin URI: https://wordpress.org/plugins/blockchyp-for-woocommerce/
 Description: Integrates BlockChyp Payment Gateway with WooCommerce.
-Version: 2.0
+Author: BlockChyp, Inc.
+Author URI: https://www.blockchyp.com
+Version: 2.0.0
+Requires at least: 6.1
+Tested up to: 6.4
+WC requires at least: 8.2
+WC tested up to: 8.5.1
+Text Domain: blockchyp-for-woocommerce
+Domain Path: /languages
 */
 
-// Check if WooCommerce is active
-if (!in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins')))) {
-    // WooCommerce is not active
-    return;
+if (!defined('ABSPATH')) {
+    exit;
 }
 
 // Include BlockChyp PHP SDK
-// require_once dirname(__FILE__) . '/vendor/autoload.php';
-
 require_once('vendor/autoload.php');
 
 // Import BlockChyp namespace
 use BlockChyp\BlockChyp;
 
+/**
+ * Required minimums and constants
+ */
+define('WC_BLOCKCHYP_VERSION', '2.0.0');
+define('WC_BLOCKCHYP_MIN_PHP_VER', '7.4');
+define('WC_BLOCKCHYP_MIN_WC_VER', '7.4');
+define('WC_BLOCKCHYP_FUTURE_MIN_WC_VER', '7.5');
+define('WC_BLOCKCHYP_MAIN_FILE', __FILE__);
+define('WC_BLOCKCHYP_ABSPATH', __DIR__ . '/');
+define(
+    'WC_BLOCKCHYP_PLUGIN_URL',
+    untrailingslashit(
+        plugins_url(basename(plugin_dir_path(__FILE__)), basename(__FILE__))
+    )
+);
+define(
+    'WC_BLOCKCHYP_PLUGIN_PATH',
+    untrailingslashit(plugin_dir_path(__FILE__))
+);
+
+/**
+ * WooCommerce fallback notice.
+ */
+function blockchyp_woocommerce_missing_wc_notice()
+{
+    /* translators: 1. URL link. */
+    echo '<div class="error"><p><strong>' .
+        sprintf(
+            esc_html__(
+                'BlockChyp requires WooCommerce to be installed and active. You can download %s here.',
+                'blockchyp-woocommerce'
+            ),
+            '<a href="https://woocommerce.com/" target="_blank">WooCommerce</a>'
+        ) .
+        '</strong></p></div>';
+}
+
+/**
+ * WooCommerce not supported fallback notice.
+ */
+function blockchyp_woocommerce_wc_not_supported()
+{
+    echo '<div class="error"><p><strong>' .
+        sprintf(
+            esc_html__(
+                'BlockChyp requires WooCommerce %1$s or greater to be installed and active. WooCommerce %2$s is no longer supported.',
+                'blockchyp-woocommerce'
+            ),
+            WC_BLOCKCHYP_MIN_WC_VER,
+            get_option('woocommerce_version')
+        ) .
+        '</strong></p></div>';
+}
+
+/**
+ * WooCommerce declare cart checkout blocks compatibility.
+ */
 function declare_cart_checkout_blocks_compatibility()
 {
     if (class_exists('\Automattic\WooCommerce\Utilities\FeaturesUtil')) {
@@ -33,10 +95,14 @@ add_action('plugins_loaded', 'blockchyp_wc_init', 0);
 function blockchyp_wc_init()
 {
     if (!class_exists('WC_Payment_Gateway')) {
+        add_action('admin_notices', 'blockchyp_woocommerce_missing_wc_notice');
         return;
     }
 
-    // include(plugin_dir_path(__FILE__) . 'blockchyp-woocommerce.php');
+    if (version_compare(get_option('woocommerce_version'), WC_BLOCKCHYP_MIN_WC_VER, '<')) {
+        add_action('admin_notices', 'blockchyp_woocommerce_wc_not_supported');
+        return;
+    }
 
     class WC_BlockChyp_Gateway extends WC_Payment_Gateway
     {
@@ -72,9 +138,6 @@ function blockchyp_wc_init()
 
             $this->supports = ['products', 'refunds', 'tokenization', 'add_payment_method'];
 
-            // Print out settings
-            // $this->print_settings();
-
             // Hooks
             add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
 
@@ -84,26 +147,9 @@ function blockchyp_wc_init()
             add_action('wp_enqueue_scripts', [$this, 'payment_scripts']);
         }
 
-        public function print_settings()
-        {
-            // Array containing all the settings
-            $settings = [
-                'enabled' => $this->enabled,
-                'testmode' => $this->testmode,
-                'api_key' => $this->api_key,
-                'bearer_token' => $this->bearer_token,
-                'signing_key' => $this->signing_key,
-                'tokenizing_key' => $this->tokenizing_key,
-                'gateway_host' => $this->gateway_host,
-                'test_gateway_host' => $this->test_gateway_host,
-            ];
-
-            // Print settings
-            foreach ($settings as $key => $value) {
-                echo $key . ': ' . $value . '<br>';
-            }
-        }
-
+        /**
+         * Register the payment method block.
+         */
         function blockchyp_register_payment_method_block()
         {
             if (!class_exists('\Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType')) {
@@ -209,6 +255,9 @@ function blockchyp_wc_init()
             ];
         }
 
+        /**
+         * BlockChyp payment fields.
+         */
         public function payment_fields()
         {
             ob_start();
@@ -409,10 +458,8 @@ function blockchyp_wc_init()
             }
 
             global $woocommerce;
-            // $order = new WC_Order($order_id);
             $order = wc_get_order($order_id);
 
-            $user = wp_get_current_user();
             $address = sanitize_text_field($_POST['billing_address_1']);
             $postcode = sanitize_text_field($_POST['billing_postcode']);
             $cardholder = sanitize_text_field($_POST['blockchyp_cardholder']);
@@ -434,12 +481,9 @@ function blockchyp_wc_init()
                 'transactionRef' => strval($order_id),
             ];
 
-            // $response = [];
-
             try {
                 // Process payment using BlockChyp SDK
                 $response = BlockChyp::charge($request);
-                // echo $response;
 
                 //Log the response
                 error_log(print_r($response, true));
@@ -475,8 +519,7 @@ function blockchyp_wc_init()
                         $response["authorizedAmount"]
                     );
 
-                    // Might want to update the status to completed over processing???
-                    // $order->update_status('completed');
+    
                     $order->add_order_note($message);
                     
                     return array(
@@ -510,7 +553,6 @@ function blockchyp_wc_init()
          **/
         public function process_refund($order_id, $amount = null, $reason = '')
         {
-            global $woocommerce;
             $order = wc_get_order($order_id);
             $transaction_id = $order->transaction_id;
 
@@ -518,13 +560,6 @@ function blockchyp_wc_init()
             if ($this->settings['testmode'] == 'yes') {
                 $testmode = true;
             }
-
-            error_log("OrderId: " . $order_id);
-            error_log("Amount: " . $amount);
-            error_log("Reason: " . $reason);
-            error_log("Transaction ID: " . $transaction_id);
-            error_log("Order: " . $order);
-
 
             BlockChyp::setApiKey($this->api_key);
             BlockChyp::setBearerToken($this->bearer_token);
@@ -543,7 +578,6 @@ function blockchyp_wc_init()
 
                 // Handle refund response
                 if ($response['approved']) {
-                    $order->update_status('refunded', __('Payment refunded via BlockChyp.', 'your-text-domain'));
                     $order->add_order_note(sprintf( "BlockChyp refund approved.<br/>Amount: %s<br/>Auth Code: %s", $amount, $response["authCode"]));
                     return true;
                 } else {

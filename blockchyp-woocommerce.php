@@ -78,20 +78,8 @@ function blockchyp_woocommerce_wc_not_supported()
         '</strong></p></div>';
 }
 
-/**
- * WooCommerce declare cart checkout blocks compatibility.
- */
-function declare_cart_checkout_blocks_compatibility()
-{
-    if (class_exists('\Automattic\WooCommerce\Utilities\FeaturesUtil')) {
-        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('cart_checkout_blocks', __FILE__, true);
-    }
-}
-
-add_action('before_woocommerce_init', 'declare_cart_checkout_blocks_compatibility');
-
 // Initialize BlockChyp payment gateway class
-add_action('plugins_loaded', 'blockchyp_wc_init', 0);
+add_action('plugins_loaded', 'blockchyp_wc_init');
 function blockchyp_wc_init()
 {
     if (!class_exists('WC_Payment_Gateway')) {
@@ -113,6 +101,7 @@ function blockchyp_wc_init()
         private $tokenizing_key;
         private $gateway_host;
         private $test_gateway_host;
+        private $render_postalcode;
 
         public function __construct()
         {
@@ -135,6 +124,7 @@ function blockchyp_wc_init()
             $this->tokenizing_key = $this->settings['tokenizing_key'];
             $this->gateway_host = $this->settings['gateway_host'];
             $this->test_gateway_host = $this->settings['test_gateway_host'];
+            $this->render_postalcode = $this->settings['render_postalcode'];
 
             $this->supports = ['products', 'refunds', 'tokenization', 'add_payment_method'];
 
@@ -142,27 +132,29 @@ function blockchyp_wc_init()
             add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
 
             // Add a new action to register the payment method using blocks-registry
-            add_action('woocommerce_blocks_loaded', [$this, 'blockchyp_register_payment_method_block']);
+            add_action('woocommerce_blocks_payment_method_type_registration', [$this, 'register_payment_method_block_integrations', 5, 1]);
+
+            add_action('before_woocommerce_init', [$this, 'declare_blockchyp_compatibility']);
 
             add_action('wp_enqueue_scripts', [$this, 'payment_scripts']);
         }
 
-        /**
-         * Register the payment method block.
-         */
-        function blockchyp_register_payment_method_block()
-        {
-            if (!class_exists('\Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType')) {
-                return;
-            }
+        // /**
+        //  * Register the payment method block.
+        //  */
+        // function blockchyp_register_payment_method_block()
+        // {
+        //     if (!class_exists('\Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType')) {
+        //         return;
+        //     }
 
-            require_once plugin_dir_path(__FILE__) . 'class-wc-blockchyp-blocks-support.php';
+        //     require_once plugin_dir_path(__FILE__) . 'class-wc-blockchyp-blocks-support.php';
 
-            add_action('woocommerce_blocks_payment_method_type_registration', function (Automattic\WooCommerce\Blocks\Payments\PaymentMethodRegistry $payment_method_registry) {
-                // Create a new instance of the WC_BlockChyp_Blocks_Support
-                $payment_method_registry->register(new WC_BlockChyp_Blocks_Support);
-            });
-        }
+        //     add_action('woocommerce_blocks_payment_method_type_registration', function (Automattic\WooCommerce\Blocks\Payments\PaymentMethodRegistry $payment_method_registry) {
+        //         // Create a new instance of the WC_BlockChyp_Blocks_Support
+        //         $payment_method_registry->register(new WC_BlockChyp_Blocks_Support);
+        //     });
+        // }
 
 
         /*
@@ -268,7 +260,7 @@ function blockchyp_wc_init()
             $this->render_payment_block();
 
             // Render optional postal code field
-            if ($this->settings['render_postalcode'] == 'yes') {
+            if ($this->render_postalcode == 'yes') {
                 $this->render_postal_code_field();
             }
 
@@ -280,7 +272,7 @@ function blockchyp_wc_init()
          */
         private function render_blockchyp_tokenizer_scripts()
         {
-            $testmode = $this->settings['testmode'] == 'yes' ? 'true' : 'false';
+            $testmode = $this->testmode == 'yes' ? 'true' : 'false';
 
             echo <<<EOT
                 <script>
@@ -417,7 +409,7 @@ function blockchyp_wc_init()
             }
 
             $testmode = false;
-            if ($this->settings['testmode'] == 'yes') {
+            if ($this->testmode == 'yes') {
                 $testmode = true;
             }
 
@@ -453,7 +445,7 @@ function blockchyp_wc_init()
         {
 
             $testmode = false;
-            if ($this->settings['testmode'] == 'yes') {
+            if ($this->testmode == 'yes') {
                 $testmode = true;
             }
 
@@ -557,7 +549,7 @@ function blockchyp_wc_init()
             $transaction_id = $order->transaction_id;
 
             $testmode = false;
-            if ($this->settings['testmode'] == 'yes') {
+            if ($this->testmode == 'yes') {
                 $testmode = true;
             }
 
@@ -593,6 +585,18 @@ function blockchyp_wc_init()
                 return false;
             }
         }
+
+        public function declare_blockchyp_compatibility() {
+            if (class_exists('\Automattic\WooCommerce\Utilities\FeaturesUtil')) {
+                \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', __FILE__, true);
+            }
+        }
+
+        public function register_payment_method_block_integrations( Automattic\WooCommerce\Blocks\Payments\PaymentMethodRegistry $payment_method_registry ) {
+            if ( class_exists( '\Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType' ) ) {
+                $payment_method_registry->register( new WC_BlockChyp_Blocks_Support() );
+            }
+        }
     }
 
     // Register the gateway with WooCommerce
@@ -603,3 +607,40 @@ function blockchyp_wc_init()
         return $methods;
     }
 }
+
+// add_action('woocommerce_blocks_loaded', 'blockchyp_register_payment_method_block');
+
+// /**
+//  * Register the BlockChyp payment method block.
+//  */
+// function blockchyp_register_payment_method_block()
+// {
+//     if (!class_exists('\Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType')) {
+//         return;
+//     }
+
+//     require_once plugin_dir_path(__FILE__) . 'class-wc-blockchyp-blocks-support.php';
+
+//     // Register BlockChyp payment method block using the same action hook as the Stripe registration.
+//     add_action('woocommerce_blocks_payment_method_type_registration', function (Automattic\WooCommerce\Blocks\Payments\PaymentMethodRegistry $payment_method_registry) {
+//         // Create a new instance of the WC_BlockChyp_Blocks_Support
+//         $container = Automattic\WooCommerce\Blocks\Package::container();
+//         $container->register(
+//             WC_BlockChyp_Blocks_Support::class,
+//             function() {
+//                 return new WC_BlockChyp_Blocks_Support();
+//             }
+//         );
+//         $payment_method_registry->register(
+//             $container->get(WC_BlockChyp_Blocks_Support::class)
+//         );
+//     }, 5);
+// }
+
+// // Compatibility declaration similar to the first snippet.
+// add_action('before_woocommerce_init', function() {
+//     if (class_exists('\Automattic\WooCommerce\Utilities\FeaturesUtil')) {
+//         \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', __FILE__, true);
+//     }
+// });
+

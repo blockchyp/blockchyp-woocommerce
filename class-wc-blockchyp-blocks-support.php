@@ -3,13 +3,15 @@
 use Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType;
 
 final class WC_BlockChyp_Blocks_Support extends AbstractPaymentMethodType {
-    private $gateway;
-    protected $name = 'blockchyp';
+    protected $gateway = null;
+    protected $name = 'BlockChyp';
+
+    public function __construct() {
+        $this->gateway = new WC_BlockChyp_Gateway();
+    }
 
     public function initialize() {
-        // TODO might need to change the settings variable
         $this->settings = get_option('woocommerce_blockchyp_settings', []);
-        $this->gateway = new WC_BlockChyp_Gateway();
     }
 
     public function is_active() {
@@ -17,18 +19,41 @@ final class WC_BlockChyp_Blocks_Support extends AbstractPaymentMethodType {
     }
 
     public function get_payment_method_script_handles() {
-        wp_register_script('blockchyp-gateway-blocks-integration', plugin_dir_url(__FILE__) . 'checkout.js', ['wc-blocks-registry', 'wc-settings', 'wp-element', 'wp-html-entities', 'wp-i18n'], null, true);
-
-        if ( function_exists( 'wp_set_script_translations' ) ) {
-            wp_set_script_translations( 'blockchyp-gateway-blocks-integration' );
+        if ('no' === $this->settings['enabled']) {
+            return;
         }
 
-        return ['blockchyp-gateway-blocks-integration'];
+        $testmode = false;
+        if ($this->settings['testmode'] == 'yes') {
+            $testmode = true;
+        }
+
+        if ($testmode) {
+            wp_register_script(
+                'blockchyp',
+                $this->settings['test_gateway_host'] .
+                    '/static/js/blockchyp-tokenizer-all.min.js',
+                array(),
+                '1.0.0',
+                true
+            );
+        } else {
+            wp_register_script(
+                'blockchyp',
+                $this->settings['gateway_host'] .
+                    '/static/js/blockchyp-tokenizer-all.min.js',
+                array(),
+                '1.0.0',
+                true
+            );
+        }
+
+        return ['blockchyp'];
     }
 
     public function get_payment_method_data() {
         return [
-            'title' => $this->gateway->title,
+            'title' => $this->name,
         ];
     }
 }

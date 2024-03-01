@@ -1,3 +1,5 @@
+import 'blockchyp';
+
 const settings = window.wc.wcSettings.getSettings('blockchyp_data', {});
 console.log(settings);
 const label = window.wp.htmlEntities.decodeEntities( settings.title ) || window.wp.i18n.__('BlockChyp', 'blockchyp');

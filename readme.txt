@@ -1,10 +1,10 @@
 === BlockChyp WooCommerce ===
 Contributors: blockchyp
-Tags: payments
-Requires at least: 4.4
-Tested up to: 5.9.3
-Stable tag: 1.0.6
-Requires PHP: 7.0
+Tags: payments, blockchyp, credit card, woocommerce
+Requires at least: 6.1
+Tested up to: 6.4
+Stable tag: 2.0.0
+Requires PHP: 7.4
 License: MIT License
 License URI: https://opensource.org/licenses/MIT
 
@@ -50,12 +50,29 @@ Visit [BlockChyp's Web Site](https://blockchyp.com) to learn more about BlockChy
 
 As of this writing, BlockChyp processes payments in the US only.
 
+= Does BlockChyp support Checkout Blocks? = 
+
+At this time BlockChyp does not support Checkout Blocks.  Please watch for updates as to when blocks will be supported.
+
+If your current checkout page uses Blocks you will need to disable blocks and use Classic ShortCodes.
+
+While editing your site:
+    * Navigate to the checkout page
+    * Click on the List View (three lines) at the top of the screen
+    * Expand Content then click on the Checkout tab, this will highlight the checkout block
+    * In the top left corner of the click on the Checkout Box and select Classic ShortCodes
+    * Click the save button in the top right corner, confirm the save and enter your site
+
 == Screenshots ==
 
 1. The BlockChyp Credit Card payments configuration screen.
 2. Example BlockChyp Credit Card entry form.
+3. How to disable Checkout Blocks.
 
 == Changelog ==
+
+= 2.0.0
+* Redesign of the BlockChyp WooCommerce Plugin
 
 = 1.0.6
 * Update Wordpress and PHP compatibility

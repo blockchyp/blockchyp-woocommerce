@@ -20,7 +20,7 @@ final class WC_BlockChyp_Blocks_Support extends AbstractPaymentMethodType {
 
     public function get_payment_method_script_handles() {
         if ('no' === $this->settings['enabled']) {
-            return;
+            return ['Plugin in not enabled'];
         }
 
         $testmode = false;

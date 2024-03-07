@@ -131,31 +131,41 @@ function blockchyp_wc_init()
             // Hooks
             add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
 
-            // Add a new action to register the payment method using blocks-registry
-            add_action('woocommerce_blocks_payment_method_type_registration', [$this, 'register_payment_method_block_integrations', 5, 1]);
-
             add_action('before_woocommerce_init', [$this, 'declare_blockchyp_compatibility']);
+
+            add_action('woocommerce_blocks_loaded', [$this, 'woocommerce_blockchyp_block_support']);
 
             add_action('wp_enqueue_scripts', [$this, 'payment_scripts']);
         }
 
-        // /**
-        //  * Register the payment method block.
-        //  */
-        // function blockchyp_register_payment_method_block()
-        // {
-        //     if (!class_exists('\Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType')) {
-        //         return;
-        //     }
+        /**
+         * Register the BlockChyp payment method block.
+         */
+        function woocommerce_blockchyp_block_support()
+        {
+            if (!class_exists('\Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType')) {
+                return;
+            }
 
-        //     require_once plugin_dir_path(__FILE__) . 'class-wc-blockchyp-blocks-support.php';
+            require_once plugin_dir_path(__FILE__) . 'class-wc-blockchyp-blocks-support.php';
 
-        //     add_action('woocommerce_blocks_payment_method_type_registration', function (Automattic\WooCommerce\Blocks\Payments\PaymentMethodRegistry $payment_method_registry) {
-        //         // Create a new instance of the WC_BlockChyp_Blocks_Support
-        //         $payment_method_registry->register(new WC_BlockChyp_Blocks_Support);
-        //     });
-        // }
-
+            // Register BlockChyp payment method block using the same action hook as the Stripe registration.
+            add_action('woocommerce_blocks_payment_method_type_registration', function (Automattic\WooCommerce\Blocks\Payments\PaymentMethodRegistry $payment_method_registry) {
+                // Create a new instance of the WC_BlockChyp_Blocks_Support
+                $container = Automattic\WooCommerce\Blocks\Package::container();
+                $container->register(
+                    WC_BlockChyp_Blocks_Support::class,
+                    function() {
+                        return new WC_BlockChyp_Blocks_Support();
+                    }
+                );
+                $payment_method_registry->register(
+                    $container->get(WC_BlockChyp_Blocks_Support::class)
+                );
+            }, 
+            5
+            );
+        }
 
         /*
          * Defines the configuration fields needed to setup BlockChyp.
@@ -591,12 +601,6 @@ function blockchyp_wc_init()
                 \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', __FILE__, true);
             }
         }
-
-        public function register_payment_method_block_integrations( Automattic\WooCommerce\Blocks\Payments\PaymentMethodRegistry $payment_method_registry ) {
-            if ( class_exists( '\Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType' ) ) {
-                $payment_method_registry->register( new WC_BlockChyp_Blocks_Support() );
-            }
-        }
     }
 
     // Register the gateway with WooCommerce
@@ -607,40 +611,3 @@ function blockchyp_wc_init()
         return $methods;
     }
 }
-
-// add_action('woocommerce_blocks_loaded', 'blockchyp_register_payment_method_block');
-
-// /**
-//  * Register the BlockChyp payment method block.
-//  */
-// function blockchyp_register_payment_method_block()
-// {
-//     if (!class_exists('\Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType')) {
-//         return;
-//     }
-
-//     require_once plugin_dir_path(__FILE__) . 'class-wc-blockchyp-blocks-support.php';
-
-//     // Register BlockChyp payment method block using the same action hook as the Stripe registration.
-//     add_action('woocommerce_blocks_payment_method_type_registration', function (Automattic\WooCommerce\Blocks\Payments\PaymentMethodRegistry $payment_method_registry) {
-//         // Create a new instance of the WC_BlockChyp_Blocks_Support
-//         $container = Automattic\WooCommerce\Blocks\Package::container();
-//         $container->register(
-//             WC_BlockChyp_Blocks_Support::class,
-//             function() {
-//                 return new WC_BlockChyp_Blocks_Support();
-//             }
-//         );
-//         $payment_method_registry->register(
-//             $container->get(WC_BlockChyp_Blocks_Support::class)
-//         );
-//     }, 5);
-// }
-
-// // Compatibility declaration similar to the first snippet.
-// add_action('before_woocommerce_init', function() {
-//     if (class_exists('\Automattic\WooCommerce\Utilities\FeaturesUtil')) {
-//         \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', __FILE__, true);
-//     }
-// });
-

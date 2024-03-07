@@ -1,24 +1,30 @@
-<?php 
+<?php
+
 
 use Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType;
 
-final class WC_BlockChyp_Blocks_Support extends AbstractPaymentMethodType {
+final class WC_BlockChyp_Blocks_Support extends AbstractPaymentMethodType
+{
     protected $gateway = null;
     protected $name = 'BlockChyp';
 
-    public function __construct() {
+    public function __construct()
+    {
         $this->gateway = new WC_BlockChyp_Gateway();
     }
 
-    public function initialize() {
+    public function initialize()
+    {
         $this->settings = get_option('woocommerce_blockchyp_settings', []);
     }
 
-    public function is_active() {
+    public function is_active()
+    {
         return $this->gateway->is_available();
     }
 
-    public function get_payment_method_script_handles() {
+    public function get_payment_method_script_handles()
+    {
         if ('no' === $this->settings['enabled']) {
             return ['Plugin in not enabled'];
         }
@@ -51,7 +57,8 @@ final class WC_BlockChyp_Blocks_Support extends AbstractPaymentMethodType {
         return ['blockchyp'];
     }
 
-    public function get_payment_method_data() {
+    public function get_payment_method_data()
+    {
         return [
             'title' => $this->name,
         ];

@@ -1,6 +1,6 @@
 <?php
 
-$finder = PhpCsFixer\Finder::create()
+$finder = (new PhpCsFixer\Finder())
     ->exclude('bootstrap/cache')
     ->exclude('node_modules')
     ->exclude('storage')
@@ -10,7 +10,7 @@ $finder = PhpCsFixer\Finder::create()
     ->notName('_ide_*.php')
 ;
 
-return PhpCsFixer\Config::create()
+return (new PhpCsFixer\Config())
     ->setRiskyAllowed(true)
     ->setRules([
         '@PSR2' => true,

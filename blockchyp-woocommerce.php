@@ -141,7 +141,7 @@ function blockchyp_wc_init()
         /**
          * Register the BlockChyp payment method block.
          */
-        function woocommerce_blockchyp_block_support()
+        public function woocommerce_blockchyp_block_support()
         {
             if (!class_exists('\Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType')) {
                 return;
@@ -150,20 +150,22 @@ function blockchyp_wc_init()
             require_once plugin_dir_path(__FILE__) . 'class-wc-blockchyp-blocks-support.php';
 
             // Register BlockChyp payment method block using the same action hook as the Stripe registration.
-            add_action('woocommerce_blocks_payment_method_type_registration', function (Automattic\WooCommerce\Blocks\Payments\PaymentMethodRegistry $payment_method_registry) {
-                // Create a new instance of the WC_BlockChyp_Blocks_Support
-                $container = Automattic\WooCommerce\Blocks\Package::container();
-                $container->register(
-                    WC_BlockChyp_Blocks_Support::class,
-                    function() {
-                        return new WC_BlockChyp_Blocks_Support();
-                    }
-                );
-                $payment_method_registry->register(
-                    $container->get(WC_BlockChyp_Blocks_Support::class)
-                );
-            }, 
-            5
+            add_action(
+                'woocommerce_blocks_payment_method_type_registration',
+                function (Automattic\WooCommerce\Blocks\Payments\PaymentMethodRegistry $payment_method_registry) {
+                    // Create a new instance of the WC_BlockChyp_Blocks_Support
+                    $container = Automattic\WooCommerce\Blocks\Package::container();
+                    $container->register(
+                        WC_BlockChyp_Blocks_Support::class,
+                        function () {
+                            return new WC_BlockChyp_Blocks_Support();
+                        }
+                    );
+                    $payment_method_registry->register(
+                        $container->get(WC_BlockChyp_Blocks_Support::class)
+                    );
+                },
+                5
             );
         }
 
@@ -521,9 +523,9 @@ function blockchyp_wc_init()
                         $response["authorizedAmount"]
                     );
 
-    
+
                     $order->add_order_note($message);
-                    
+
                     return array(
                         'result' => 'success',
                         'redirect' => $this->get_return_url($order)
@@ -580,23 +582,24 @@ function blockchyp_wc_init()
 
                 // Handle refund response
                 if ($response['approved']) {
-                    $order->add_order_note(sprintf( "BlockChyp refund approved.<br/>Amount: %s<br/>Auth Code: %s", $amount, $response["authCode"]));
+                    $order->add_order_note(sprintf("BlockChyp refund approved.<br/>Amount: %s<br/>Auth Code: %s", $amount, $response["authCode"]));
                     return true;
                 } else {
                     // Handle failed refund
                     wc_add_notice('Refund failed: ' . $response['responseDescription'], 'error');
-                    $order->add_order_note(sprintf( "BlockChyp refund failed.<br/>Response Description: %s", $response["responseDescription"]));
+                    $order->add_order_note(sprintf("BlockChyp refund failed.<br/>Response Description: %s", $response["responseDescription"]));
                     return false;
                 }
             } catch (Exception $e) {
                 // Handle exceptions or errors during refund processing
                 wc_add_notice('Refund failed: ' . $e->getMessage(), 'error');
-                $order->add_order_note(sprintf( "BlockChyp refund failed.<br/>Error: %s", $e->getMessage()));
+                $order->add_order_note(sprintf("BlockChyp refund failed.<br/>Error: %s", $e->getMessage()));
                 return false;
             }
         }
 
-        public function declare_blockchyp_compatibility() {
+        public function declare_blockchyp_compatibility()
+        {
             if (class_exists('\Automattic\WooCommerce\Utilities\FeaturesUtil')) {
                 \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', __FILE__, true);
             }

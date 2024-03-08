@@ -1,4 +1,4 @@
-=== BlockChyp WooCommerce Gateway ===
+=== BlockChyp Gateway ===
 Contributors: blockchyp
 Tags: payments, blockchyp, credit card, woocommerce
 Requires at least: 6.1
@@ -26,7 +26,7 @@ Search the WordPress plugin directory for BlockChyp.  Click Install and Activate
 
 = Manual Installation =
 
-Download the plugin source from [Github](https://github.com/blockchyp/blockchyp-woocommerce).
+Download the plugin source from [Github](https://github.com/blockchyp/blockchyp-gateway).
 
 Once you have the source code, run `composer install` from the plugin's root directory in order download the plugin's dependencies.
 

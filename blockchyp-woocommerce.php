@@ -1,7 +1,7 @@
 <?php
 /*
-Plugin Name: WooCommerce BlockChyp Gateway
-Plugin URI: https://wordpress.org/plugins/woocommerce-blockchyp-gateway/
+Plugin Name: BlockChyp Gateway
+Plugin URI: https://wordpress.org/plugins/blockchyp-gateway/
 Description: Integrates BlockChyp Payment Gateway with WooCommerce.
 Author: BlockChyp, Inc.
 Author URI: https://www.blockchyp.com
@@ -10,7 +10,7 @@ Requires at least: 6.1
 Tested up to: 6.4
 WC requires at least: 8.2
 WC tested up to: 8.5.1
-Text Domain: woocommerce-blockchyp-gateway
+Text Domain: blockchyp-gateway
 Domain Path: /languages
 */
 

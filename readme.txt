@@ -1,9 +1,9 @@
-=== BlockChyp WooCommerce ===
+=== BlockChyp WooCommerce Gateway ===
 Contributors: blockchyp
 Tags: payments, blockchyp, credit card, woocommerce
 Requires at least: 6.1
 Tested up to: 6.4
-Stable tag: 2.0.0
+Stable tag: 1.0.0
 Requires PHP: 7.4
 License: MIT License
 License URI: https://opensource.org/licenses/MIT
@@ -71,28 +71,5 @@ While editing your site:
 
 == Changelog ==
 
-= 2.0.0
-* Redesign of the BlockChyp WooCommerce Plugin
-
-= 1.0.6
-* Update Wordpress and PHP compatibility
-
-= 1.0.5
-* Fix place order event interception.
-
-= 1.0.3
-* Fix a big related to gateway routing.
-
-= 1.0.2
-* Fine tuned postal code / AVS behavior for will call shipping methods.
-
-= 1.0.1 =
-* Add release automation.
-
 = 1.0.0 =
-* Debut release.
-
-== Upgrade Notice ==
-
-= 1.0.0 =
-Initial release of the BlockChyp WooCommerce plugin.
+New release of the BlockChyp WooCommerce plugin.

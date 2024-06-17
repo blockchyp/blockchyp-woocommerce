@@ -5,7 +5,9 @@ Plugin URI: https://wordpress.org/plugins/blockchyp-payment-gateway/
 Description: Integrates BlockChyp Payment Gateway with WooCommerce.
 Author: BlockChyp, Inc.
 Author URI: https://www.blockchyp.com
-Version: 1.0.0
+License: MIT License
+License URI: https://opensource.org/licenses/MIT
+Version: 1.0.1
 Requires at least: 6.1
 Tested up to: 6.4
 WC requires at least: 8.2
@@ -56,7 +58,7 @@ function blockchyp_woocommerce_missing_wc_notice()
                 'BlockChyp requires WooCommerce to be installed and active. You can download %s here.',
                 'blockchyp-woocommerce'
             ),
-            '<a href="https://woocommerce.com/" target="_blank">WooCommerce</a>'
+            '<a href="' . esc_url('https://woocommerce.com/') . '" target="_blank">WooCommerce</a>'
         ) .
         '</strong></p></div>';
 }
@@ -72,8 +74,8 @@ function blockchyp_woocommerce_wc_not_supported()
                 'BlockChyp requires WooCommerce %1$s or greater to be installed and active. WooCommerce %2$s is no longer supported.',
                 'blockchyp-woocommerce'
             ),
-            WC_BLOCKCHYP_MIN_WC_VER,
-            get_option('woocommerce_version')
+            esc_html( WC_BLOCKCHYP_MIN_WC_VER ),
+            esc_html( get_option('woocommerce_version') )
         ) .
         '</strong></p></div>';
 }
@@ -183,8 +185,10 @@ function blockchyp_wc_init()
                         'blockchyp-woocommerce'
                     ),
                     'default' => 'yes',
-                    'description' =>
-                    'Include BlockChyp as a WooCommerce payment option.',
+                    'description' => __(
+                        'Include BlockChyp as a WooCommerce payment option.',
+                        'blockchyp-woocommerce'
+                    )
                 ],
                 'testmode' => [
                     'title' => __('Test Mode', 'blockchyp-woocommerce'),
@@ -195,7 +199,8 @@ function blockchyp_wc_init()
                     ),
                     'default' => 'no',
                     'description' => __(
-                        'Connect your WooCommerce store with a BlockChyp test merchant account.'
+                        'Connect your WooCommerce store with a BlockChyp test merchant account.',
+                        'blockchyp-woocommerce'
                     ),
                 ],
                 'api_key' => [
@@ -203,7 +208,8 @@ function blockchyp_wc_init()
                     'type' => 'text',
                     'desc_tip' => true,
                     'description' => __(
-                        'Identifies a set of BlockChyp API credentials'
+                        'Identifies a set of BlockChyp API credentials',
+                        'blockchyp-woocommerce'
                     ),
                 ],
                 'bearer_token' => [
@@ -211,7 +217,8 @@ function blockchyp_wc_init()
                     'type' => 'text',
                     'desc_tip' => true,
                     'description' => __(
-                        'Secure Bearer Token used to validate a BlockChyp API request.'
+                        'Secure Bearer Token used to validate a BlockChyp API request.',
+                        'blockchyp-woocommerce'
                     ),
                 ],
                 'signing_key' => [
@@ -219,7 +226,8 @@ function blockchyp_wc_init()
                     'type' => 'textarea',
                     'desc_tip' => true,
                     'description' => __(
-                        'Signing key to be used for creating API request HMAC signatures.'
+                        'Signing key to be used for creating API request HMAC signatures.',
+                        'blockchyp-woocommerce'
                     ),
                 ],
                 'tokenizing_key' => [
@@ -227,7 +235,8 @@ function blockchyp_wc_init()
                     'type' => 'textarea',
                     'desc_tip' => true,
                     'description' => __(
-                        'Tokenzing key to be used credit card tokenization.'
+                        'Tokenzing key to be used credit card tokenization.',
+                        'blockchyp-woocommerce'
                     ),
                 ],
                 'gateway_host' => [
@@ -235,14 +244,20 @@ function blockchyp_wc_init()
                     'type' => 'text',
                     'default' => 'https://api.blockchyp.com',
                     'desc_tip' => true,
-                    'description' => __('BlockChyp Production Gateway'),
+                    'description' => __(
+                        'BlockChyp Production Gateway',
+                        'blockchyp-woocommerce'
+                    ),
                 ],
                 'test_gateway_host' => [
                     'title' => __('Test Gateway Host', 'blockchyp-woocommerce'),
                     'type' => 'text',
                     'default' => 'https://test.blockchyp.com',
                     'desc_tip' => true,
-                    'description' => __('BlockChyp Test Gateway'),
+                    'description' => __(
+                        'BlockChyp Test Gateway',
+                        'blockchyp-woocommerce'
+                    ),
                 ],
                 'render_postalcode' => [
                     'title' => __('Postal Code Field', 'blockchyp-woocommerce'),
@@ -253,7 +268,8 @@ function blockchyp_wc_init()
                     ),
                     'default' => 'no',
                     'description' => __(
-                        'If your checkout page doesn\'t include a billing address, check this box to add a billing postal code to the payment page'
+                        'If your checkout page doesn\'t include a billing address, check this box to add a billing postal code to the payment page',
+                        'blockchyp-woocommerce'
                     ),
                 ],
             ];
@@ -285,17 +301,21 @@ function blockchyp_wc_init()
         private function render_blockchyp_tokenizer_scripts()
         {
             $testmode = $this->testmode == 'yes' ? 'true' : 'false';
+            $testmode_esc = esc_js($testmode);
+            $gateway_host = esc_js($this->gateway_host);
+            $test_gateway_host = esc_js($this->test_gateway_host);
+            $tokenizing_key = esc_js($this->tokenizing_key);
 
-            echo <<<EOT
+            $script = "
                 <script>
                     var blockchyp_enrolled = false;
                     jQuery(document).ready(function() {
                         var options = {
                             postalCode: false
                         };
-                        tokenizer.gatewayHost = '{$this->gateway_host}';
-                        tokenizer.testGatewayHost = '{$this->test_gateway_host}';
-                        tokenizer.render('{$this->tokenizing_key}', {$testmode}, 'secure-input', options);
+                        tokenizer.gatewayHost = '{$gateway_host}';
+                        tokenizer.testGatewayHost = '{$test_gateway_host}';
+                        tokenizer.render('{$tokenizing_key}', {$testmode_esc}, 'secure-input', options);
                     });
                     jQuery('form.woocommerce-checkout').on('checkout_place_order', function (e) {
                         var t = e.target;
@@ -325,13 +345,13 @@ function blockchyp_wc_init()
                             if (!tokenInput) {
                                 e.preventDefault();
                                 var req = {
-                                    test: {$testmode},
+                                    test: {$testmode_esc},
                                     cardholderName: cardholder
                                 }
                                 if (postalCodeValue) {
                                     req.postalCode = postalCodeValue.split('-')[0];
                                 }
-                                tokenizer.tokenize('{$this->tokenizing_key}', req)
+                                tokenizer.tokenize('{$tokenizing_key}', req)
                                 .then(function (response) {
                                     if (response.data.success) {
                                         jQuery('#blockchyp_token').val(response.data.token);
@@ -355,7 +375,8 @@ function blockchyp_wc_init()
                         return false
                     });
                 </script>
-            EOT;
+            ";
+            echo $script;
         }
 
         /**
@@ -363,7 +384,7 @@ function blockchyp_wc_init()
          */
         private function render_payment_block_styling()
         {
-            echo <<<EOT
+            $blockStyling = '
                 <style>
                     .blockchyp-input {
                         border: 1px solid #ccc;
@@ -374,7 +395,8 @@ function blockchyp_wc_init()
                         margin-top: 10px;
                     }
                 </style>
-            EOT;
+            ';
+            echo $blockStyling;
         }
 
         /**
@@ -382,7 +404,7 @@ function blockchyp_wc_init()
          */
         private function render_payment_block()
         {
-            echo <<<EOT
+            $paymentBlock = '
                 <div>
                     <label class="blockchyp-label">Card Number</label>
                     <div id="secure-input"></div>
@@ -393,7 +415,8 @@ function blockchyp_wc_init()
                     <input class="blockchyp-input" style="width: 100%;" id="blockchyp_cardholder" name="blockchyp_cardholder"/>
                     <input type="hidden" id="blockchyp_token" name="blockchyp_token"/>
                 </div>
-            EOT;
+            ';
+            echo $paymentBlock;
         }
 
         /**
@@ -401,12 +424,11 @@ function blockchyp_wc_init()
          */
         private function render_postal_code_field()
         {
-            echo <<<EOT
-                <div>
-                    <label class="blockchyp-label">Postal Code</label>
-                    <input class="blockchyp-input" style="width: 100%;" maxlength="5" id="blockchyp_postalcode" name="blockchyp_postalcode"/>
-                </div>
-            EOT;
+            $html = '<div>
+                        <label class="blockchyp-label">Postal Code</label>
+                        <input class="blockchyp-input" style="width: 100%;" maxlength="5" id="blockchyp_postalcode" name="blockchyp_postalcode"/>
+                    </div>';
+            echo $html;
         }
 
         /**

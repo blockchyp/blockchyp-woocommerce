@@ -14,6 +14,16 @@ Integrate BlockChyp with your WooCommerce store.
 
 This plugin allows BlockChyp merchants to accept all major credit cards and BlockChyp gift cards via their WooCommerce store.
 
+= What is BlockChyp? =
+
+BlockChyp is a payment processing platform that integrates with point-of-sale systems to provide a robust integrated payments experience.
+
+= BlockChyp Services used in Plugin =
+
+The BlockChyp WooCommerce Plugin uses the BlockChyp PHP SDK to process the payments through the BlockChyp Payment Gateway.  Visit the attached [BlockChyp PHP SDK Repository](https://github.com/blockchyp/blockchyp-php) to learn more about the SDK and the terms of use. The SDK uses [BlockChyp Gateway Host URL](https://api.blockchyp.com) and [BlockChyp Test Gateway Host URL](https://test.blockchyp.com) to properly connect to the BlockChyp Gateway for either live or test transactions.
+
+The BlockChyp WooCommerce Plugin also implements the BlockChyp Web Tokenizer to connect e-commerce payments pages to BlockChyp in a secure way that minimizes PCI Scope.  Visit the attached [BlockChyp Web Tokenizer Repository](https://github.com/blockchyp/blockchyp-tokenizer) to learn more about the Web Tokenizer and the terms of use.
+
 == Installation ==
 
 First make sure that the WooCommerce plugin is installed by searching the plugin directory for WooCommerce.  Install and Activate the WooCommerce plugin if you haven't already.

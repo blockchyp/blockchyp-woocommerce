@@ -74,8 +74,8 @@ function blockchyp_woocommerce_wc_not_supported()
                 'BlockChyp requires WooCommerce %1$s or greater to be installed and active. WooCommerce %2$s is no longer supported.',
                 'blockchyp-woocommerce'
             ),
-            esc_html( WC_BLOCKCHYP_MIN_WC_VER ),
-            esc_html( get_option('woocommerce_version') )
+            esc_html(WC_BLOCKCHYP_MIN_WC_VER),
+            esc_html(get_option('woocommerce_version'))
         ) .
         '</strong></p></div>';
 }

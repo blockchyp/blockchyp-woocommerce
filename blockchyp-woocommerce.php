@@ -54,6 +54,7 @@ function blockchyp_woocommerce_missing_wc_notice()
     /* translators: 1. URL link. */
     echo '<div class="error"><p><strong>' .
         sprintf(
+            // translators: s. WooCommerce URL link.
             esc_html__(
                 'BlockChyp requires WooCommerce to be installed and active. You can download %s here.',
                 'blockchyp-woocommerce'
@@ -70,6 +71,7 @@ function blockchyp_woocommerce_wc_not_supported()
 {
     echo '<div class="error"><p><strong>' .
         sprintf(
+            // translators: 1. Min WooCommerce version, 2. Current WooCommerce version.
             esc_html__(
                 'BlockChyp requires WooCommerce %1$s or greater to be installed and active. WooCommerce %2$s is no longer supported.',
                 'blockchyp-woocommerce'

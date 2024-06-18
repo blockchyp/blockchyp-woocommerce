@@ -140,6 +140,17 @@ function blockchyp_wc_init()
             add_action('woocommerce_blocks_loaded', [$this, 'woocommerce_blockchyp_block_support']);
 
             add_action('wp_enqueue_scripts', [$this, 'payment_scripts']);
+
+            add_action('woocommerce_before_checkout_form', [$this, 'add_nonce_to_checkout_form']);
+
+        }
+
+        /**
+         * Add a nonce to the checkout form.
+         */
+        public function add_nonce_to_checkout_form()
+        {
+            wp_nonce_field('process_checkout', 'checkout_nonce');
         }
 
         /**
@@ -488,10 +499,17 @@ function blockchyp_wc_init()
             global $woocommerce;
             $order = wc_get_order($order_id);
 
-            $address = sanitize_text_field($_POST['billing_address_1']);
-            $postcode = sanitize_text_field($_POST['billing_postcode']);
-            $cardholder = sanitize_text_field($_POST['blockchyp_cardholder']);
-            $token = sanitize_text_field($_POST['blockchyp_token']);
+            // Verify the nonce
+            if (!isset($_POST['checkout_nonce']) || !wp_verify_nonce($_POST['checkout_nonce'], 'process_checkout')) {
+                wc_add_notice('Nonce verification failed. Please try again.', 'error');
+            }
+
+            // Sanitize the input
+            $address = isset($_POST['billing_address_1']) ? sanitize_text_field($_POST['billing_address_1']) : '';
+            $postcode = isset($_POST['billing_postcode']) ? sanitize_text_field($_POST['billing_postcode']) : '';
+            $cardholder = isset($_POST['blockchyp_cardholder']) ? sanitize_text_field($_POST['blockchyp_cardholder']) : '';
+            $token = isset($_POST['blockchyp_token']) ? sanitize_text_field($_POST['blockchyp_token']) : '';
+
             $total = $woocommerce->cart->total;
 
             BlockChyp::setApiKey($this->api_key);

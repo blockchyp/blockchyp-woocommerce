@@ -5,7 +5,7 @@ Plugin URI: https://wordpress.org/plugins/blockchyp-payment-gateway/
 Description: Integrates BlockChyp Payment Gateway with WooCommerce.
 Author: BlockChyp, Inc.
 Author URI: https://www.blockchyp.com
-License: MIT License
+License: Expat License
 License URI: https://opensource.org/licenses/MIT
 Version: 1.0.1
 Requires at least: 6.1
@@ -295,11 +295,10 @@ function blockchyp_wc_init()
         {
             ob_start();
 
-            $this->render_blockchyp_tokenizer_scripts();
-            $this->render_payment_block_styling();
+            // $this->render_blockchyp_tokenizer_scripts();
 
             $this->render_payment_block();
-
+            
             // Render optional postal code field
             if ($this->render_postalcode == 'yes') {
                 $this->render_postal_code_field();
@@ -308,9 +307,9 @@ function blockchyp_wc_init()
             ob_end_flush();
         }
 
-        /**
-         * Render BlockChyp JavaScript.
-         */
+        // /**
+        //  * Render BlockChyp JavaScript.
+        //  */
         private function render_blockchyp_tokenizer_scripts()
         {
             $testmode = $this->testmode == 'yes' ? 'true' : 'false';
@@ -329,6 +328,7 @@ function blockchyp_wc_init()
                         tokenizer.gatewayHost = '{$gateway_host}';
                         tokenizer.testGatewayHost = '{$test_gateway_host}';
                         tokenizer.render('{$tokenizing_key}', {$testmode_esc}, 'secure-input', options);
+                        console.log('Tokenizer: ', tokenizer);
                     });
                     jQuery('form.woocommerce-checkout').on('checkout_place_order', function (e) {
                         var t = e.target;
@@ -389,27 +389,8 @@ function blockchyp_wc_init()
                     });
                 </script>
             ";
-            echo $script;
-        }
 
-        /**
-         * Render BlockChyp CSS.
-         */
-        private function render_payment_block_styling()
-        {
-            $blockStyling = '
-                <style>
-                    .blockchyp-input {
-                        border: 1px solid #ccc;
-                        padding: 3px !important;
-                    }
-                    .blockchyp-label {
-                        display: block;
-                        margin-top: 10px;
-                    }
-                </style>
-            ';
-            echo $blockStyling;
+            echo $script;
         }
 
         /**
@@ -429,7 +410,29 @@ function blockchyp_wc_init()
                     <input type="hidden" id="blockchyp_token" name="blockchyp_token"/>
                 </div>
             ';
-            echo $paymentBlock;
+            
+            // Define a custom allowed HTML tags and attributes array
+            $allowed_tags = array(
+                'div' => array(
+                    'id' => array(),
+                    'class' => array(),
+                    'style' => array()
+                ),
+                'label' => array(
+                    'class' => array()
+                ),
+                'input' => array(
+                    'class' => array(),
+                    'id' => array(),
+                    'name' => array(),
+                    'type' => array(),
+                    'value' => array(),
+                    'style' => array(),
+                    'maxlength' => array()
+                )
+            );
+
+            echo wp_kses($paymentBlock, $allowed_tags);
         }
 
         /**
@@ -441,47 +444,87 @@ function blockchyp_wc_init()
                         <label class="blockchyp-label">Postal Code</label>
                         <input class="blockchyp-input" style="width: 100%;" maxlength="5" id="blockchyp_postalcode" name="blockchyp_postalcode"/>
                     </div>';
-            echo $html;
+
+            // Define a custom allowed HTML tags and attributes array
+            $allowed_tags = array(
+                'div' => array(
+                    'id' => array(),
+                    'class' => array(),
+                    'style' => array()
+                ),
+                'label' => array(
+                    'class' => array()
+                ),
+                'input' => array(
+                    'class' => array(),
+                    'id' => array(),
+                    'name' => array(),
+                    'type' => array(),
+                    'value' => array(),
+                    'style' => array(),
+                    'maxlength' => array()
+                )
+            );
+
+            echo wp_kses($html, $allowed_tags);
         }
 
         /**
          * Outputs BlockChyp payment scripts.
          */
-        public function payment_scripts()
-        {
-            global $wp;
-
-            if ('no' === $this->enabled) {
-                return;
-            }
-
-            $testmode = false;
-            if ($this->testmode == 'yes') {
-                $testmode = true;
-            }
-
-            if ($testmode) {
+        public function payment_scripts() {
+            if (is_checkout()) {
+                global $wp;
+            
+                if ('no' === $this->enabled) {
+                    return;
+                }
+            
+                $testmode = $this->testmode == 'yes';
+            
+                if ($testmode) {
+                    wp_register_script(
+                        'blockchyp',
+                        $this->test_gateway_host . '/static/js/blockchyp-tokenizer-all.min.js',
+                        array(),
+                        '1.0.0',
+                        true
+                    );
+                } else {
+                    wp_register_script(
+                        'blockchyp',
+                        $this->gateway_host . '/static/js/blockchyp-tokenizer-all.min.js',
+                        array(),
+                        '1.0.0',
+                        true
+                    );
+                }
+            
+                wp_enqueue_script('blockchyp');
+            
                 wp_register_script(
-                    'blockchyp',
-                    $this->test_gateway_host .
-                        '/static/js/blockchyp-tokenizer-all.min.js',
-                    array(),
-                    '1.0.0',
+                    'blockchyp-tokenizer', 
+                    plugins_url('blockchyp-tokenizer.js', __FILE__), 
+                    array('jquery'), 
+                    '1.0.0', 
                     true
                 );
-            } else {
-                wp_register_script(
-                    'blockchyp',
-                    $this->gateway_host .
-                        '/static/js/blockchyp-tokenizer-all.min.js',
-                    array(),
-                    '1.0.0',
-                    true
-                );
-            }
 
-            wp_enqueue_script('blockchyp');
+                // Prepare inline script with dynamic PHP variables
+                $params = array(
+                    'testmode' => esc_js($testmode ? 'true' : 'false'),
+                    'gatewayHost' => esc_js($this->gateway_host),
+                    'testGatewayHost' => esc_js($this->test_gateway_host),
+                    'tokenizingKey' => esc_js($this->tokenizing_key),
+                );
+
+                wp_localize_script('blockchyp-tokenizer', 'blockchyp_params', $params);
+
+                wp_enqueue_script('blockchyp-tokenizer');
+            
+            }
         }
+        
 
         /**
          * Process a BlockChyp charge.
@@ -500,15 +543,35 @@ function blockchyp_wc_init()
             $order = wc_get_order($order_id);
 
             // Verify the nonce
-            if (!isset($_POST['checkout_nonce']) || !wp_verify_nonce($_POST['checkout_nonce'], 'process_checkout')) {
-                wc_add_notice('Nonce verification failed. Please try again.', 'error');
+            if (!isset($_POST['checkout_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['checkout_nonce'])) , 'process_checkout')) {
+                wc_add_notice( 'Nonce verification failed. Please try again.', 'error' );
             }
 
             // Sanitize the input
-            $address = isset($_POST['billing_address_1']) ? sanitize_text_field($_POST['billing_address_1']) : '';
-            $postcode = isset($_POST['billing_postcode']) ? sanitize_text_field($_POST['billing_postcode']) : '';
-            $cardholder = isset($_POST['blockchyp_cardholder']) ? sanitize_text_field($_POST['blockchyp_cardholder']) : '';
-            $token = isset($_POST['blockchyp_token']) ? sanitize_text_field($_POST['blockchyp_token']) : '';
+            $address = isset($_POST['billing_address_1']) ? sanitize_text_field(wp_unslash($_POST['billing_address_1'])) : '';
+            $postcode = isset($_POST['billing_postcode']) ? sanitize_text_field(wp_unslash($_POST['billing_postcode'])) : '';
+            $cardholder = isset($_POST['blockchyp_cardholder']) ? sanitize_text_field(wp_unslash($_POST['blockchyp_cardholder'])) : '';
+            $token = isset($_POST['blockchyp_token']) ? sanitize_text_field(wp_unslash($_POST['blockchyp_token'])) : '';
+
+            // Validate postal code
+            if (!is_numeric($postcode)) {
+                wc_add_notice('Invalid postcode. Please enter a valid postcode.', 'error');
+            }
+
+            // Validate cardholder name (letters, spaces, dots, and dashes only)
+            if (!preg_match('/^[a-zA-Z\s\.\-]+$/', $cardholder)) {
+                wc_add_notice('Invalid cardholder name. Please enter a valid cardholder name.', 'error');
+            }
+
+            // Validate address (letters, numbers, spaces, and dashes only)
+            if (!preg_match('/^[a-zA-Z0-9\s\.\-]+$/', $address)) {
+                wc_add_notice('Invalid address. Please enter a valid address.', 'error');
+            }
+
+            // Validate token (letters and numbers only)
+            if (!preg_match('/^[a-zA-Z0-9]+$/', $token)) {
+                wc_add_notice('Invalid token. Please enter a valid token.', 'error');
+            }
 
             $total = $woocommerce->cart->total;
 
@@ -524,6 +587,7 @@ function blockchyp_wc_init()
                 'test' => $testmode,
                 'postalCode' => $postcode,
                 'address' => $address,
+                'cardholder' => $cardholder,
                 'transactionRef' => strval($order_id),
             ];
 

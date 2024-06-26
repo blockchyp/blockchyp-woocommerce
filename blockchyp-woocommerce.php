@@ -471,16 +471,17 @@ function blockchyp_wc_init()
         /**
          * Outputs BlockChyp payment scripts.
          */
-        public function payment_scripts() {
+        public function payment_scripts()
+        {
             if (is_checkout()) {
                 global $wp;
-            
+                
                 if ('no' === $this->enabled) {
                     return;
                 }
-            
+
                 $testmode = $this->testmode == 'yes';
-            
+
                 if ($testmode) {
                     wp_register_script(
                         'blockchyp',
@@ -498,7 +499,6 @@ function blockchyp_wc_init()
                         true
                     );
                 }
-            
                 wp_enqueue_script('blockchyp');
             }
         }
@@ -520,7 +520,7 @@ function blockchyp_wc_init()
             $order = wc_get_order($order_id);
 
             // Verify the nonce
-            if (!isset($_POST['checkout_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['checkout_nonce'])) , 'process_checkout')) {
+            if (!isset($_POST['checkout_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['checkout_nonce'])), 'process_checkout')) {
                 wc_add_notice('Nonce verification failed. Please try again.', 'error');
             }
 

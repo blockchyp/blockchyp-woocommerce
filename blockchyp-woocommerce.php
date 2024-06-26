@@ -434,8 +434,6 @@ function blockchyp_wc_init()
             echo wp_kses($paymentBlock, $allowed_tags);
         }
 
-        
-
         /**
          * Render optional postal code field.
          */
@@ -504,7 +502,6 @@ function blockchyp_wc_init()
                 wp_enqueue_script('blockchyp');
             }
         }
-        
 
         /**
          * Process a BlockChyp charge.
@@ -524,7 +521,7 @@ function blockchyp_wc_init()
 
             // Verify the nonce
             if (!isset($_POST['checkout_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['checkout_nonce'])) , 'process_checkout')) {
-                wc_add_notice( 'Nonce verification failed. Please try again.', 'error' );
+                wc_add_notice('Nonce verification failed. Please try again.', 'error');
             }
 
             // Sanitize the input

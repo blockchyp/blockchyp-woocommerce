@@ -5,7 +5,7 @@ Requires at least: 6.1
 Tested up to: 6.4
 Stable tag: 1.0.1
 Requires PHP: 7.4
-License: MIT License
+License: Expat License
 License URI: https://opensource.org/licenses/MIT
 
 Integrate BlockChyp with your WooCommerce store.

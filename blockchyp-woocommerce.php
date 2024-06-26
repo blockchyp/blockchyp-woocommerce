@@ -294,22 +294,22 @@ function blockchyp_wc_init()
         public function payment_fields()
         {
             ob_start();
-
-            // $this->render_blockchyp_tokenizer_scripts();
-
+            
+            $this->render_blockchyp_tokenizer_scripts();
+            
             $this->render_payment_block();
             
             // Render optional postal code field
             if ($this->render_postalcode == 'yes') {
                 $this->render_postal_code_field();
             }
-
+           
             ob_end_flush();
         }
 
-        // /**
-        //  * Render BlockChyp JavaScript.
-        //  */
+        /**
+         * Render BlockChyp JavaScript.
+         */
         private function render_blockchyp_tokenizer_scripts()
         {
             $testmode = $this->testmode == 'yes' ? 'true' : 'false';
@@ -328,7 +328,6 @@ function blockchyp_wc_init()
                         tokenizer.gatewayHost = '{$gateway_host}';
                         tokenizer.testGatewayHost = '{$test_gateway_host}';
                         tokenizer.render('{$tokenizing_key}', {$testmode_esc}, 'secure-input', options);
-                        console.log('Tokenizer: ', tokenizer);
                     });
                     jQuery('form.woocommerce-checkout').on('checkout_place_order', function (e) {
                         var t = e.target;
@@ -435,6 +434,8 @@ function blockchyp_wc_init()
             echo wp_kses($paymentBlock, $allowed_tags);
         }
 
+        
+
         /**
          * Render optional postal code field.
          */
@@ -501,27 +502,6 @@ function blockchyp_wc_init()
                 }
             
                 wp_enqueue_script('blockchyp');
-            
-                wp_register_script(
-                    'blockchyp-tokenizer', 
-                    plugins_url('blockchyp-tokenizer.js', __FILE__), 
-                    array('jquery'), 
-                    '1.0.0', 
-                    true
-                );
-
-                // Prepare inline script with dynamic PHP variables
-                $params = array(
-                    'testmode' => esc_js($testmode ? 'true' : 'false'),
-                    'gatewayHost' => esc_js($this->gateway_host),
-                    'testGatewayHost' => esc_js($this->test_gateway_host),
-                    'tokenizingKey' => esc_js($this->tokenizing_key),
-                );
-
-                wp_localize_script('blockchyp-tokenizer', 'blockchyp_params', $params);
-
-                wp_enqueue_script('blockchyp-tokenizer');
-            
             }
         }
         

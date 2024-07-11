@@ -1,8 +1,8 @@
 === BlockChyp Payment Gateway ===
 Contributors: blockchyp
 Tags: payments, blockchyp, credit card, woocommerce
-Requires at least: 6.1
-Tested up to: 6.4
+Requires at least: 6.4
+Tested up to: 6.5
 Stable tag: 1.0.1
 Requires PHP: 7.4
 License: GPLv3
@@ -80,6 +80,9 @@ While editing your site:
 3. How to disable Checkout Blocks.
 
 == Changelog ==
+
+= 1.0.1 =
+Bug Fixes and WordPress Plugin Approval
 
 = 1.0.0 =
 New release of the BlockChyp WooCommerce plugin.

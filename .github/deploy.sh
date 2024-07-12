@@ -35,7 +35,7 @@ main() {
 }
 
 svn_deploy() {
-    svn checkout http://svn.wp-plugins.org/blockchyp-for-woocommerce "$staging_dir"
+    svn checkout http://plugins.svn.wordpress.org/blockchyp-payment-gateway "$staging_dir"
 
     test -d "$staging_dir/tags/$svn_tag" \
         && echo "Tag already exists: $svn_tag" && exit 1 \

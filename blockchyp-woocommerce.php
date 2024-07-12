@@ -7,7 +7,7 @@ Author: BlockChyp, Inc.
 Author URI: https://www.blockchyp.com
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
-Version: 1.0.1
+Version: 1.1.0
 Requires at least: 6.4
 Tested up to: 6.5
 WC requires at least: 8.5
@@ -29,7 +29,7 @@ use BlockChyp\BlockChyp;
 /**
  * Required minimums and constants
  */
-define('WC_BLOCKCHYP_VERSION', '1.0.1');
+define('WC_BLOCKCHYP_VERSION', '1.1.0');
 define('WC_BLOCKCHYP_MIN_PHP_VER', '7.4');
 define('WC_BLOCKCHYP_MIN_WC_VER', '7.4');
 define('WC_BLOCKCHYP_FUTURE_MIN_WC_VER', '7.5');

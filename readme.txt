@@ -3,7 +3,7 @@ Contributors: blockchyp
 Tags: payments, blockchyp, credit card, woocommerce
 Requires at least: 6.4
 Tested up to: 6.5
-Stable tag: 1.0.1
+Stable tag: 1.1.0
 Requires PHP: 7.4
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
@@ -81,8 +81,8 @@ While editing your site:
 
 == Changelog ==
 
-= 1.0.1 =
-Bug Fixes and WordPress Plugin Approval
+= 1.1.0 =
+Wordpress Plugin Approval and Initial Release
 
 = 1.0.0 =
 New release of the BlockChyp WooCommerce plugin.

@@ -9,6 +9,7 @@ svn_tag="${git_tag#v}"
 files=(
     LICENSE
     blockchyp-woocommerce.php
+    class-wc-blockchyp-blocks-support.php
     readme.txt
 )
 directories=(

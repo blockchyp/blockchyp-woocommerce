@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "5842a1eb707fd06d10577d775a5d0b0f",
+    "content-hash": "2343d1c4610ec22f391b38ffd653e720",
     "packages": [
         {
             "name": "blockchyp/blockchyp-php",
-            "version": "v2.17.3",
+            "version": "v2.18.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/blockchyp/blockchyp-php.git",
-                "reference": "043d275e8c8fd48b5ed737cd2548ed1c27757c7f"
+                "reference": "e493554387c4c2503ae0b85a281186f3de6476fa"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/blockchyp/blockchyp-php/zipball/043d275e8c8fd48b5ed737cd2548ed1c27757c7f",
-                "reference": "043d275e8c8fd48b5ed737cd2548ed1c27757c7f",
+                "url": "https://api.github.com/repos/blockchyp/blockchyp-php/zipball/e493554387c4c2503ae0b85a281186f3de6476fa",
+                "reference": "e493554387c4c2503ae0b85a281186f3de6476fa",
                 "shasum": ""
             },
             "require": {
@@ -41,9 +41,9 @@
             "homepage": "https://www.blockchyp.com/",
             "support": {
                 "issues": "https://github.com/blockchyp/blockchyp-php/issues",
-                "source": "https://github.com/blockchyp/blockchyp-php/tree/v2.17.3"
+                "source": "https://github.com/blockchyp/blockchyp-php/tree/v2.18.5"
             },
-            "time": "2023-10-31T15:46:40+00:00"
+            "time": "2024-04-29T16:25:59+00:00"
         }
     ],
     "packages-dev": [

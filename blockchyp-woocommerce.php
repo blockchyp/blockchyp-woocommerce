@@ -295,7 +295,7 @@ function blockchyp_wc_init()
         {
             ob_start();
 
-            $testmode = $this->testmode == 'yes' ? 'true' : 'false';
+            $testmode = $this->testmode == 'yes' ? true : false;
             
             ?>
             <script>
@@ -306,9 +306,9 @@ function blockchyp_wc_init()
                     };
                     tokenizer.gatewayHost = "<?php echo esc_js($this->gateway_host); ?>";
                     tokenizer.testGatewayHost = "<?php echo esc_js($this->test_gateway_host); ?>";
-                    tokenizer.render("<?php echo esc_js($this->tokenizing_key); ?>", "<?php echo esc_js($testmode); ?>", 'secure-input', options);
+                    tokenizer.render("<?php echo esc_js($this->tokenizing_key); ?>", "<?php echo $testmode; ?>", 'secure-input', options);
                 });
-                jQuery('form.woocommerce-checkout').on('checkout_place_order', function (e) {
+                jQuery('form.woocommerce-checkout').on('woocommerce_checkout_place_order', function (e) {
                     var t = e.target;
                     var self = this;
                     var bcSelected = jQuery('#payment_method_blockchyp').is(':checked');
@@ -336,7 +336,7 @@ function blockchyp_wc_init()
                         if (!tokenInput) {
                             e.preventDefault();
                             var req = {
-                                test: <?php echo esc_js($testmode); ?>,
+                                test: $testmode,
                                 cardholderName: cardholder
                             }
                             if (postalCodeValue) {

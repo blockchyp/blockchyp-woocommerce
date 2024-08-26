@@ -20,7 +20,7 @@ services:
       - ./docker/dev-php.ini:/usr/local/etc/php/conf.d/dev-php.ini
   db:
     container_name: blockchyp_woocommerce_mysql
-    image: mysql:5.7
+    image: mysql:8.0
     ports:
       - "5678:3306"
     env_file:

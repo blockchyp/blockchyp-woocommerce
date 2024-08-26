@@ -7,7 +7,7 @@ Author: BlockChyp, Inc.
 Author URI: https://www.blockchyp.com
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
-Version: 1.1.0
+Version: 1.2.0
 Requires at least: 6.4
 Tested up to: 6.5
 WC requires at least: 8.5
@@ -150,7 +150,7 @@ function blockchyp_wc_init()
          */
         public function add_nonce_to_checkout_form()
         {
-            wp_nonce_field('process_checkout', 'checkout_nonce');
+            wp_nonce_field('process_checkout', 'woocommerce-process-checkout-nonce');
         }
 
         /**
@@ -295,7 +295,7 @@ function blockchyp_wc_init()
         {
             ob_start();
 
-            $testmode = $this->testmode == 'yes' ? 'true' : 'false';
+            $testmode_str = $this->testmode == 'yes' ? "true" : "false";
             
             ?>
             <script>
@@ -306,65 +306,49 @@ function blockchyp_wc_init()
                     };
                     tokenizer.gatewayHost = "<?php echo esc_js($this->gateway_host); ?>";
                     tokenizer.testGatewayHost = "<?php echo esc_js($this->test_gateway_host); ?>";
-                    tokenizer.render("<?php echo esc_js($this->tokenizing_key); ?>", "<?php echo esc_js($testmode); ?>", 'secure-input', options);
+                    tokenizer.render("<?php echo esc_js($this->tokenizing_key); ?>", <?php echo esc_js($testmode_str); ?>, 'secure-input', options);
                 });
                 jQuery('form.woocommerce-checkout').on('checkout_place_order', function (e) {
-                    var t = e.target;
-                    var self = this;
-                    var bcSelected = jQuery('#payment_method_blockchyp').is(':checked');
-                    if (!bcSelected) {
-                        return true
-                    }
-                    var tokenInput = jQuery('#blockchyp_token').val();
-                    if (tokenInput && blockchyp_enrolled) {
-                        return true
-                    }
                     if (!blockchyp_enrolled) {
-                        var tokenInput = jQuery('#blockchyp_token').val();
-                        var cardholder = jQuery('#blockchyp_cardholder').val();
-                        var postalCode = jQuery('#blockchyp_postalcode')
-                        var postalCodeValue = '';
-                        if (!postalCode) {
-                            postalCode = jQuery('#billing_postcode')
+                        var tokenInput = jQuery('#blockchyp_token');
+                        if (tokenInput.val()) {
+                            return true;
                         }
-                        if (postalCode) {
-                            postalCodeValue = postalCode.val();
-                        }
-                        if (tokenInput) {
-                            return true
-                        }
-                        if (!tokenInput) {
-                            e.preventDefault();
-                            var req = {
-                                test: <?php echo esc_js($testmode); ?>,
-                                cardholderName: cardholder
-                            }
-                            if (postalCodeValue) {
-                                req.postalCode = postalCodeValue.split('-')[0];
-                            }
-                            tokenizer.tokenize("<?php echo esc_js($this->tokenizing_key); ?>", req)
-                            .then(function (response) {
-                                if (response.data.success) {
-                                    jQuery('#blockchyp_token').val(response.data.token);
-                                    if (!response.data.token) {
-                                        jquery( document.body ).trigger( 'checkout_error' );
-                                        blockchyp_enrolled = false
-                                        return
-                                    }
-                                    blockchyp_enrolled = true
-                                    jQuery('form.woocommerce-checkout').submit()
-                                }
-                            })
-                            .catch(function (error) {
-                                jquery( document.body ).trigger( 'checkout_error' );
-                                blockchyp_enrolled = false;
-                                console.log(error);
-                            })
-                        }
-                    }
 
-                    return false
-                    });
+                        e.preventDefault();  // Prevent the form from submitting immediately
+
+                        var cardholder = jQuery('#blockchyp_cardholder').val();
+                        var postalCode = jQuery('#blockchyp_postalcode').val() || jQuery('#billing_postcode').val() || '';
+
+                        var req = {
+                            test: <?php echo esc_js($testmode_str); ?>,
+                            cardholderName: cardholder
+                        };
+
+                        if (postalCode) {
+                            req.postalCode = postalCode.split('-')[0];
+                        }
+
+                        tokenizer.tokenize("<?php echo esc_js($this->tokenizing_key); ?>", req)
+                        .then(function (response) {
+                            if (response.data.success) {
+                                jQuery('#blockchyp_token').val(response.data.token);
+                                blockchyp_enrolled = true;
+                                jQuery('form.woocommerce-checkout').submit();  // Resubmit the form after tokenization
+                            } else {
+                                jQuery(document.body).trigger('checkout_error');
+                                blockchyp_enrolled = false;
+                            }
+                        })
+                        .catch(function (error) {
+                            jQuery(document.body).trigger('checkout_error');
+                            blockchyp_enrolled = false;
+                            console.log(error);
+                        });
+
+                        return false;  // Prevent the form from submitting
+                    }
+                });
                 </script>
             <?php
 
@@ -377,8 +361,6 @@ function blockchyp_wc_init()
            
             ob_end_flush();
         }
-
-        
 
         /**
          * Render card input fields.
@@ -508,9 +490,9 @@ function blockchyp_wc_init()
             $order = wc_get_order($order_id);
 
             // Verify the nonce
-            if (!isset($_POST['checkout_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['checkout_nonce'])), 'process_checkout')) {
-                wc_add_notice('Nonce verification failed. Please try again.', 'error');
-            }
+            // if (!isset($_POST['woocommerce-process-checkout-nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['woocommerce-process-checkout-nonce'])), 'process_checkout')) {
+            //     wc_add_notice('Nonce verification failed. Please try again.', 'error');
+            // }
 
             // Sanitize the input
             $address = isset($_POST['billing_address_1']) ? sanitize_text_field(wp_unslash($_POST['billing_address_1'])) : '';
@@ -559,10 +541,7 @@ function blockchyp_wc_init()
             try {
                 // Process payment using BlockChyp SDK
                 $response = BlockChyp::charge($request);
-
-                //Log the response
-                error_log(print_r($response, true));
-
+                
                 // Handle payment response
                 if ($response['approved'] || $response['success']) {
                     if(isset($response["transactionId"])) {

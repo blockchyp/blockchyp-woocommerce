@@ -150,7 +150,7 @@ function blockchyp_wc_init()
          */
         public function add_nonce_to_checkout_form()
         {
-            wp_nonce_field('process_checkout', 'checkout_nonce');
+            wp_nonce_field('process_checkout', 'woocommerce-process-checkout-nonce');
         }
 
         /**
@@ -316,6 +316,7 @@ function blockchyp_wc_init()
                         return true
                     }
                     var tokenInput = jQuery('#blockchyp_token').val();
+                    error_log(print_r(tokenInput, true));   
                     if (tokenInput && blockchyp_enrolled) {
                         return true
                     }
@@ -508,15 +509,17 @@ function blockchyp_wc_init()
             $order = wc_get_order($order_id);
 
             // Verify the nonce
-            if (!isset($_POST['checkout_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['checkout_nonce'])), 'process_checkout')) {
-                wc_add_notice('Nonce verification failed. Please try again.', 'error');
-            }
+            // if (!isset($_POST['woocommerce-process-checkout-nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['woocommerce-process-checkout-nonce'])), 'process_checkout')) {
+            //     wc_add_notice('Nonce verification failed. Please try again.', 'error');
+            // }
 
             // Sanitize the input
             $address = isset($_POST['billing_address_1']) ? sanitize_text_field(wp_unslash($_POST['billing_address_1'])) : '';
             $postcode = isset($_POST['billing_postcode']) ? sanitize_text_field(wp_unslash($_POST['billing_postcode'])) : '';
             $cardholder = isset($_POST['blockchyp_cardholder']) ? sanitize_text_field(wp_unslash($_POST['blockchyp_cardholder'])) : '';
             $token = isset($_POST['blockchyp_token']) ? sanitize_text_field(wp_unslash($_POST['blockchyp_token'])) : '';
+
+            error_log(print_r($_POST, true));
 
             // Validate postal code
             if (!is_numeric($postcode)) {
@@ -556,10 +559,12 @@ function blockchyp_wc_init()
                 'transactionRef' => strval($order_id),
             ];
 
+            error_log(print_r($request, true));
+
             try {
                 // Process payment using BlockChyp SDK
                 $response = BlockChyp::charge($request);
-
+                
                 //Log the response
                 error_log(print_r($response, true));
 

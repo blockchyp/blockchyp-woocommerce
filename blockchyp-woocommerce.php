@@ -7,7 +7,7 @@ Author: BlockChyp, Inc.
 Author URI: https://www.blockchyp.com
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
-Version: 1.1.0
+Version: 1.2.0
 Requires at least: 6.4
 Tested up to: 6.5
 WC requires at least: 8.5

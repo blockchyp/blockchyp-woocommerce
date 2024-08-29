@@ -63,7 +63,7 @@ svn_deploy() {
 s3_deploy() {
     aws s3 sync --delete \
         "$build_dir/" \
-        "s3://$TEST_S3_BUCKET/wordpress/wp-content/plugins/blockchyp-for-woocommerce/"
+        "s3://$TEST_S3_BUCKET/wordpress/wp-content/plugins/blockchyp-payment-gateway/"
 
     aws ecs run-task \
         --cluster "${WP_CLUSTER}" \

@@ -571,8 +571,6 @@ function blockchyp_wc_init()
                     // Process payment using BlockChyp SDK:  Preauth/Capture model
                     $response = BlockChyp::preauth($request);
 
-                    // error_log(print_r($response, true));
-
                     // Handle payment response
                     if ($response['approved'] || $response['success']) {
                         if(isset($response["transactionId"])) {
@@ -580,7 +578,7 @@ function blockchyp_wc_init()
                             $order->set_transaction_id($transactionId); 
                         } else {
                             // Handle the case where transactionId is not set in the response
-                            wc_add_notice('Transaction ID not found in the payment response.', 'error');
+                            error_log('Transaction ID not found in the payment response.');
                             return array(
                                 'result' => 'failed' . $response['responseDescription'],
                                 'redirect' => $this->get_return_url($order)
@@ -617,7 +615,7 @@ function blockchyp_wc_init()
                         );
                     } else {
                         // Handle failed payment
-                        wc_add_notice('Payment failed: ' . $response['responseDescription'], 'error');
+                        error_log('Payment Failed: ' . $response['responseDescription']);
                         return array(
                             'result' => 'failed' . $response['responseDescription'],
                             'redirect' => $this->get_return_url($order)
@@ -636,7 +634,7 @@ function blockchyp_wc_init()
                             $transactionId = $response["transactionId"];
                         } else {
                             // Handle the case where transactionId is not set in the response
-                            wc_add_notice('Transaction ID not found in the payment response.', 'error');
+                            error_log('Transaction ID not found in the payment response.');
                             return array(
                                 'result' => 'failed' . $response['responseDescription'],
                                 'redirect' => $this->get_return_url($order)
@@ -672,7 +670,7 @@ function blockchyp_wc_init()
                         );
                     } else {
                         // Handle failed payment
-                        wc_add_notice('Payment failed: ' . $response['responseDescription'], 'error');
+                        error_log('Payment Failed: ' . $response['responseDescription']);
                         return array(
                             'result' => 'failed' . $response['responseDescription'],
                             'redirect' => $this->get_return_url($order)
@@ -702,10 +700,12 @@ function blockchyp_wc_init()
 
                 $order = wc_get_order($order_id);
                 $transaction_id = $order->get_transaction_id();
+                $amount = $order->get_total();
                 $payment_captured = $order->get_meta('_blockchyp_payment_captured', true);
 
                 if ($payment_captured == 'yes') {
                     error_log(print_r('Payment already captured.', true));
+
                     return true;
                 }
 
@@ -722,14 +722,12 @@ function blockchyp_wc_init()
 
                 $request = [
                     'test' => $testmode,
+                    'amount' => $amount,
                     'transactionId' => $transaction_id,
                 ];
 
                 try {
                     $response = BlockChyp::capture($request);
-
-                    // error_log(print_r('Capture Response:', true));
-                    // error_log(print_r($response, true));
 
                     // Handle capture response
                     if ($response['approved']) {
@@ -739,13 +737,13 @@ function blockchyp_wc_init()
                         return true;
                     } else {
                         // Handle failed capture
-                        wc_add_notice('Capture failed: ' . $response['responseDescription'], 'error');
+                        error_log('Capture Failed: ' . $response['responseDescription']);
                         $order->add_order_note(sprintf("BlockChyp Capture Failed.<br/>Response Description: %s", $response["responseDescription"]));
                         return false;
                     }
                 } catch (Exception $e) {
                     // Handle exceptions or errors during capture processing
-                    wc_add_notice('Capture failed: ' . $e->getMessage(), 'error');
+                    error_log('Capture Failed: ' . $response['responseDescription']);
                     $order->add_order_note(sprintf("BlockChyp Capture Failed.<br/>Error: %s", $e->getMessage()));
                     return false;
                 }
@@ -760,21 +758,18 @@ function blockchyp_wc_init()
          **/
         public function cancel_payment($order_id)
         {
-            $order = wc_get_order( $order_id );
-            $order_status = $order->get_status();
-            error_log(print_r('Order Status: ' . $order_status, true));
+            $order = wc_get_order($order_id);
+            $order_total = $order->get_total();
+            $total_refunded = $order->get_total_refunded();
+            $net_payment = number_format($order_total - $total_refunded, 2);
 
-            if ($order_status !== 'refunded') {
-                error_log(print_r('Inside the refund if statement.', true));
-                // refund the order
-                $this->process_refund($order_id, $reason = 'Order Cancelled');
+            // If the order is already refunded, return true
+            if ($net_payment == '0.00') {
+                $order->add_order_note(sprintf("BlockChyp Order has already been refunded."));
                 return true;
-            } else {
-                //set the order status to refunded
-                $order->update_status('refunded', '');
             }
-        
-
+            
+            $this->process_refund($order_id, $net_payment, '');
         }
 
 
@@ -787,6 +782,7 @@ function blockchyp_wc_init()
          **/
         public function process_refund($order_id, $amount = null, $reason = '')
         {
+            
             $order = wc_get_order($order_id);
             $transaction_id = $order->get_transaction_id();
             $payment_captured = $order->get_meta('_blockchyp_payment_captured', true);
@@ -827,7 +823,7 @@ function blockchyp_wc_init()
                             return true;
                         } else {
                             // Handle failed refund
-                            wc_add_notice('Refund Failed: ' . $response['responseDescription'], 'error');
+                            error_log('Refund Failed: ' . $response['responseDescription']);
                             $order->add_order_note(sprintf("BlockChyp Refund Failed.<br/>Response Description: %s", $response["responseDescription"]));
                             return false;
                         }
@@ -842,7 +838,7 @@ function blockchyp_wc_init()
                             return true;
                         } else {
                             // Handle failed void
-                            wc_add_notice('Void Failed: ' . $response['responseDescription'], 'error');
+                            error_log('Void Failed: ' . $response['responseDescription']);
                             $order->add_order_note(sprintf("BlockChyp Void Failed.<br/>Response Description: %s", $response["responseDescription"]));
                             return false;
                         }
@@ -857,7 +853,7 @@ function blockchyp_wc_init()
                         return true;
                     } else {
                         // Handle failed refund
-                        wc_add_notice('Refund Failed: ' . $response['responseDescription'], 'error');
+                        error_log('Refund Failed: ' . $response['responseDescription']);
                         $order->add_order_note(sprintf("BlockChyp Refund Failed.<br/>Response Description: %s", $response["responseDescription"]));
                         return false;
                     }

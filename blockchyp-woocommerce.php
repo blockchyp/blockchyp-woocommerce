@@ -150,7 +150,7 @@ function blockchyp_wc_init()
                 add_action('woocommerce_order_status_completed', [$this, 'capture_payment']);
             }
 
-            add_action('woocommerce_order_status_cancelled', [ $this, 'cancel_payment' ] );
+            add_action('woocommerce_order_status_cancelled', [ $this, 'cancel_payment' ]);
 
         }
 
@@ -616,8 +616,6 @@ function blockchyp_wc_init()
                             'redirect' => $this->get_return_url($order)
                         );
                     }
-
-
                 }
                 else {
                     // Process payment using BlockChyp SDK: Default Charge (Combined Auth/Capture)

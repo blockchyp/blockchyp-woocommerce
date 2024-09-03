@@ -3,7 +3,7 @@ Contributors: blockchyp
 Tags: payments, blockchyp, credit card, woocommerce
 Requires at least: 6.4
 Tested up to: 6.5
-Stable tag: 1.2.0
+Stable tag: 1.3.0
 Requires PHP: 7.4
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
@@ -73,6 +73,12 @@ While editing your site:
     * In the top left corner of the click on the Checkout Box and select Classic ShortCodes
     * Click the save button in the top right corner, confirm the save and enter your site
 
+= Does BlockChyp support Preauth and Capture? = 
+
+Yes, BlockChyp supports Preauth and Capture mode.  In the BlockChyp Payment Gateway Settings Page, simply check the "Preauth/Capture Mode" checkbox.  Selecting this mode will issue a pre-authorization at checkout, changing the order status to "On hold". The payment will automatically be captured on shipment assuming that the order status is changed to either "Processing" or "Completed" as part of the shipping process.  You can manually capture the payment by changing the order status to either "Processing" or "Completed".
+
+If the "Preauth/Capture Mode" checkbox is not selected, which is default, payments will be both preauthed and captured at the same time at checkout. 
+
 == Screenshots ==
 
 1. The BlockChyp Credit Card payments configuration screen.
@@ -80,6 +86,9 @@ While editing your site:
 3. How to disable Checkout Blocks.
 
 == Changelog ==
+
+= 1.3.0 =
+Added functionality for Preauth/Capture model
 
 = 1.2.0 =
 Fixed Plugin when running with Production Creds

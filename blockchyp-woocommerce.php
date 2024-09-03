@@ -7,7 +7,7 @@ Author: BlockChyp, Inc.
 Author URI: https://www.blockchyp.com
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
-Version: 1.2.0
+Version: 1.3.0
 Requires at least: 6.4
 Tested up to: 6.5
 WC requires at least: 8.5
@@ -29,7 +29,7 @@ use BlockChyp\BlockChyp;
 /**
  * Required minimums and constants
  */
-define('WC_BLOCKCHYP_VERSION', '1.1.0');
+define('WC_BLOCKCHYP_VERSION', '1.3.0');
 define('WC_BLOCKCHYP_MIN_PHP_VER', '7.4');
 define('WC_BLOCKCHYP_MIN_WC_VER', '7.4');
 define('WC_BLOCKCHYP_FUTURE_MIN_WC_VER', '7.5');
@@ -99,6 +99,7 @@ function blockchyp_wc_init()
     class WC_BlockChyp_Gateway extends WC_Payment_Gateway
     {
         private $testmode;
+        private $preauth_capture_mode;
         private $api_key;
         private $bearer_token;
         private $signing_key;
@@ -122,6 +123,7 @@ function blockchyp_wc_init()
             // Define settings
             $this->enabled = $this->settings['enabled'];
             $this->testmode = $this->settings['testmode'];
+            $this->preauth_capture_mode = $this->settings['preauth_capture_mode'];
             $this->api_key = $this->settings['api_key'];
             $this->bearer_token = $this->settings['bearer_token'];
             $this->signing_key = $this->settings['signing_key'];
@@ -142,6 +144,13 @@ function blockchyp_wc_init()
             add_action('wp_enqueue_scripts', [$this, 'payment_scripts']);
 
             add_action('woocommerce_before_checkout_form', [$this, 'add_nonce_to_checkout_form']);
+
+            if ($this->preauth_capture_mode == 'yes') {
+                add_action('woocommerce_order_status_processing', [$this, 'capture_payment']);
+                add_action('woocommerce_order_status_completed', [$this, 'capture_payment']);
+            }
+
+            add_action('woocommerce_order_status_cancelled', [ $this, 'cancel_payment' ] );
 
         }
 
@@ -213,6 +222,19 @@ function blockchyp_wc_init()
                     'default' => 'no',
                     'description' => __(
                         'Connect your WooCommerce store with a BlockChyp test merchant account.',
+                        'blockchyp-woocommerce'
+                    ),
+                ],
+                'preauth_capture_mode' => [
+                    'title' => __('Preauth/Capture Mode', 'blockchyp-woocommerce'),
+                    'type' => 'checkbox',
+                    'label' => __(
+                        'Use Preauth/Capture Mode',
+                        'blockchyp-woocommerce'
+                    ),
+                    'default' => 'no',
+                    'description' => __(
+                        'This mode issues a pre-authorization at checkout, the payment is captured at shipment or manually captured later.',
                         'blockchyp-woocommerce'
                     ),
                 ],
@@ -486,13 +508,13 @@ function blockchyp_wc_init()
                 $testmode = true;
             }
 
+            $preauth_capture_mode = false;
+            if ($this->preauth_capture_mode == 'yes') {
+                $preauth_capture_mode = true;
+            }
+
             global $woocommerce;
             $order = wc_get_order($order_id);
-
-            // Verify the nonce
-            // if (!isset($_POST['woocommerce-process-checkout-nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['woocommerce-process-checkout-nonce'])), 'process_checkout')) {
-            //     wc_add_notice('Nonce verification failed. Please try again.', 'error');
-            // }
 
             // Sanitize the input
             $address = isset($_POST['billing_address_1']) ? sanitize_text_field(wp_unslash($_POST['billing_address_1'])) : '';
@@ -539,54 +561,116 @@ function blockchyp_wc_init()
             ];
 
             try {
-                // Process payment using BlockChyp SDK
-                $response = BlockChyp::charge($request);
-                
-                // Handle payment response
-                if ($response['approved'] || $response['success']) {
-                    if(isset($response["transactionId"])) {
-                        $transactionId = $response["transactionId"];
+                // If the preauth/capture mode is enabled, preauth at checkout and capture later
+                if ($preauth_capture_mode) {
+                    // Process payment using BlockChyp SDK:  Preauth/Capture model
+                    $response = BlockChyp::preauth($request);
+
+                    // Handle payment response
+                    if ($response['approved'] || $response['success']) {
+                        if(isset($response["transactionId"])) {
+                            $transactionId = $response["transactionId"];
+                            $order->set_transaction_id($transactionId); 
+                        } else {
+                            // Handle the case where transactionId is not set in the response
+                            error_log('Transaction ID not found in the payment response.');
+                            return array(
+                                'result' => 'failed' . $response['responseDescription'],
+                                'redirect' => $this->get_return_url($order)
+                            );
+                        }
+
+                        $order->update_meta_data('_blockchyp_payment_captured', 'no');
+                        $order->update_status('on-hold', 'Order status was set to On Hold due to a pre-authorization.');
+                        $order->save();
+
+                        $woocommerce->cart->empty_cart();
+
+                        $message = sprintf(
+                            'BlockChyp Preauth successful.<br/>'
+                                    . 'Transaction ID: %s<br/>'
+                                    . 'Auth Code: %s<br/>'
+                                    . 'Payment Type: %s (%s)<br/>'
+                                    . 'AVS Response: %s<br/>'
+                                    . 'Authorized Amount: %s',
+                            $response["transactionId"],
+                            $response["authCode"],
+                            $response["paymentType"],
+                            $response["maskedPan"],
+                            $response["avsResponse"],
+                            $response["authorizedAmount"]
+                        );
+
+
+                        $order->add_order_note($message);
+
+                        return array(
+                            'result' => 'success',
+                            'redirect' => $this->get_return_url($order)
+                        );
                     } else {
-                        // Handle the case where transactionId is not set in the response
-                        wc_add_notice('Transaction ID not found in the payment response.', 'error');
+                        // Handle failed payment
+                        error_log('Payment Failed: ' . $response['responseDescription']);
                         return array(
                             'result' => 'failed' . $response['responseDescription'],
                             'redirect' => $this->get_return_url($order)
                         );
                     }
 
-                    $order->payment_complete($transactionId);
-                    $woocommerce->cart->empty_cart();
 
-                    $message = sprintf(
-                        'BlockChyp payment successful.<br/>'
-                                . 'Transaction ID: %s<br/>'
-                                . 'Auth Code: %s<br/>'
-                                . 'Payment Type: %s (%s)<br/>'
-                                . 'AVS Response: %s<br/>'
-                                . 'Authorized Amount: %s',
-                        $response["transactionId"],
-                        $response["authCode"],
-                        $response["paymentType"],
-                        $response["maskedPan"],
-                        $response["avsResponse"],
-                        $response["authorizedAmount"]
-                    );
+                }
+                else {
+                    // Process payment using BlockChyp SDK: Default Charge (Combined Auth/Capture)
+                    $response = BlockChyp::charge($request);
+                    
+                    // Handle payment response
+                    if ($response['approved'] || $response['success']) {
+                        if(isset($response["transactionId"])) {
+                            $transactionId = $response["transactionId"];
+                        } else {
+                            // Handle the case where transactionId is not set in the response
+                            error_log('Transaction ID not found in the payment response.');
+                            return array(
+                                'result' => 'failed' . $response['responseDescription'],
+                                'redirect' => $this->get_return_url($order)
+                            );
+                        }
 
+                        $order->payment_complete($transactionId);
+                        $order->update_meta_data('_blockchyp_payment_captured', 'yes');
+                        $order->save();
 
-                    $order->add_order_note($message);
+                        $woocommerce->cart->empty_cart();
 
-                    return array(
-                        'result' => 'success',
-                        'redirect' => $this->get_return_url($order)
-                    );
-                } else {
-                    // Handle failed payment
-                    wc_add_notice('Payment failed: ' . $response['responseDescription'], 'error');
-                    return array(
-                        'result' => 'failed' . $response['responseDescription'],
-                        'redirect' => $this->get_return_url($order)
-                    );
+                        $message = sprintf(
+                            'BlockChyp payment successful.<br/>'
+                                    . 'Transaction ID: %s<br/>'
+                                    . 'Auth Code: %s<br/>'
+                                    . 'Payment Type: %s (%s)<br/>'
+                                    . 'AVS Response: %s<br/>'
+                                    . 'Authorized Amount: %s',
+                            $response["transactionId"],
+                            $response["authCode"],
+                            $response["paymentType"],
+                            $response["maskedPan"],
+                            $response["avsResponse"],
+                            $response["authorizedAmount"]
+                        );
+
+                        $order->add_order_note($message);
+
+                        return array(
+                            'result' => 'success',
+                            'redirect' => $this->get_return_url($order)
+                        );
+                    } else {
+                        // Handle failed payment
+                        error_log('Payment Failed: ' . $response['responseDescription']);
+                        return array(
+                            'result' => 'failed' . $response['responseDescription'],
+                            'redirect' => $this->get_return_url($order)
+                        );
+                    }
                 }
             } catch (Exception $e) {
                 // Handle exceptions or errors during payment processing
@@ -598,6 +682,92 @@ function blockchyp_wc_init()
             }
         }
 
+
+        /**
+         * Process a BlockChyp Capture.
+         * @param int $order_id
+         * @return array
+         **/
+        public function capture_payment($order_id)
+        {
+
+            if ($this->preauth_capture_mode == 'yes') {
+
+                $order = wc_get_order($order_id);
+                $transaction_id = $order->get_transaction_id();
+                $amount = $order->get_total();
+                $payment_captured = $order->get_meta('_blockchyp_payment_captured', true);
+
+                if ($payment_captured == 'yes') {
+                    error_log(print_r('Payment already captured.', true));
+
+                    return true;
+                }
+
+                $testmode = false;
+                if ($this->testmode == 'yes') {
+                    $testmode = true;
+                }
+
+                BlockChyp::setApiKey($this->api_key);
+                BlockChyp::setBearerToken($this->bearer_token);
+                BlockChyp::setSigningKey($this->signing_key);
+                BlockChyp::setGatewayHost($this->gateway_host);
+                BlockChyp::setTestGatewayHost($this->test_gateway_host);
+
+                $request = [
+                    'test' => $testmode,
+                    'amount' => $amount,
+                    'transactionId' => $transaction_id,
+                ];
+
+                try {
+                    $response = BlockChyp::capture($request);
+
+                    // Handle capture response
+                    if ($response['approved']) {
+                        $order->update_meta_data('_blockchyp_payment_captured', 'yes');
+                        $order->save();
+                        $order->add_order_note(sprintf("BlockChyp Capture Approved.<br/>Auth Code: %s", $response["authCode"]));
+                        return true;
+                    } else {
+                        // Handle failed capture
+                        error_log('Capture Failed: ' . $response['responseDescription']);
+                        $order->add_order_note(sprintf("BlockChyp Capture Failed.<br/>Response Description: %s", $response["responseDescription"]));
+                        return false;
+                    }
+                } catch (Exception $e) {
+                    // Handle exceptions or errors during capture processing
+                    error_log('Capture Failed: ' . $response['responseDescription']);
+                    $order->add_order_note(sprintf("BlockChyp Capture Failed.<br/>Error: %s", $e->getMessage()));
+                    return false;
+                }
+            }
+
+        }
+
+        /**
+         * Cancel a BlockChyp order.
+         * @param int $order_id
+         * @return boolean
+         **/
+        public function cancel_payment($order_id)
+        {
+            $order = wc_get_order($order_id);
+            $order_total = $order->get_total();
+            $total_refunded = $order->get_total_refunded();
+            $net_payment = number_format($order_total - $total_refunded, 2);
+
+            // If the order is already refunded, return true
+            if ($net_payment == '0.00') {
+                $order->add_order_note(sprintf("BlockChyp Order has already been refunded."));
+                return true;
+            }
+            
+            $this->process_refund($order_id, $net_payment, '');
+        }
+
+
         /**
          * Process a BlockChyp refund.
          * @param int $order_id
@@ -607,12 +777,19 @@ function blockchyp_wc_init()
          **/
         public function process_refund($order_id, $amount = null, $reason = '')
         {
+            
             $order = wc_get_order($order_id);
-            $transaction_id = $order->transaction_id;
+            $transaction_id = $order->get_transaction_id();
+            $payment_captured = $order->get_meta('_blockchyp_payment_captured', true);
 
             $testmode = false;
             if ($this->testmode == 'yes') {
                 $testmode = true;
+            }
+
+            $preauth_capture_mode = false;
+            if ($this->preauth_capture_mode == 'yes') {
+                $preauth_capture_mode = true;
             }
 
             BlockChyp::setApiKey($this->api_key);
@@ -628,22 +805,58 @@ function blockchyp_wc_init()
             ];
 
             try {
-                $response = BlockChyp::refund($request);
 
-                // Handle refund response
-                if ($response['approved']) {
-                    $order->add_order_note(sprintf("BlockChyp refund approved.<br/>Amount: %s<br/>Auth Code: %s", $amount, $response["authCode"]));
-                    return true;
-                } else {
-                    // Handle failed refund
-                    wc_add_notice('Refund failed: ' . $response['responseDescription'], 'error');
-                    $order->add_order_note(sprintf("BlockChyp refund failed.<br/>Response Description: %s", $response["responseDescription"]));
-                    return false;
+                if ($preauth_capture_mode) {
+
+                    if ($payment_captured == 'yes') {
+                       
+                        $response = BlockChyp::refund($request);
+
+                        // Handle refund response
+                        if ($response['approved']) {
+                            $order->add_order_note(sprintf("BlockChyp Refund Approved.<br/>Amount: %s<br/>Auth Code: %s", $amount, $response["authCode"]));
+                            return true;
+                        } else {
+                            // Handle failed refund
+                            error_log('Refund Failed: ' . $response['responseDescription']);
+                            $order->add_order_note(sprintf("BlockChyp Refund Failed.<br/>Response Description: %s", $response["responseDescription"]));
+                            return false;
+                        }
+                    }
+                    else {  
+                        // If the payment is not captured, void the preauth instead of refunding
+                        $response = BlockChyp::void($request);
+
+                        // Handle void response
+                        if ($response['approved']) {
+                            $order->add_order_note(sprintf("BlockChyp Payment Voided.<br/>Amount: %s<br/>Auth Code: %s", $amount, $response["authCode"]));
+                            return true;
+                        } else {
+                            // Handle failed void
+                            error_log('Void Failed: ' . $response['responseDescription']);
+                            $order->add_order_note(sprintf("BlockChyp Void Failed.<br/>Response Description: %s", $response["responseDescription"]));
+                            return false;
+                        }
+                    }
+                }
+                else {
+                    $response = BlockChyp::refund($request);
+
+                    // Handle refund response
+                    if ($response['approved']) {
+                        $order->add_order_note(sprintf("BlockChyp Refund Approved.<br/>Amount: %s<br/>Auth Code: %s", $amount, $response["authCode"]));
+                        return true;
+                    } else {
+                        // Handle failed refund
+                        error_log('Refund Failed: ' . $response['responseDescription']);
+                        $order->add_order_note(sprintf("BlockChyp Refund Failed.<br/>Response Description: %s", $response["responseDescription"]));
+                        return false;
+                    }
                 }
             } catch (Exception $e) {
                 // Handle exceptions or errors during refund processing
                 wc_add_notice('Refund failed: ' . $e->getMessage(), 'error');
-                $order->add_order_note(sprintf("BlockChyp refund failed.<br/>Error: %s", $e->getMessage()));
+                $order->add_order_note(sprintf("BlockChyp Refund Failed.<br/>Error: %s", $e->getMessage()));
                 return false;
             }
         }

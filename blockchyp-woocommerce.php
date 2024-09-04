@@ -568,9 +568,9 @@ function blockchyp_wc_init()
 
                     // Handle payment response
                     if ($response['approved'] || $response['success']) {
-                        if(isset($response["transactionId"])) {
+                        if (isset($response["transactionId"])) {
                             $transactionId = $response["transactionId"];
-                            $order->set_transaction_id($transactionId); 
+                            $order->set_transaction_id($transactionId);
                         } else {
                             // Handle the case where transactionId is not set in the response
                             error_log('Transaction ID not found in the payment response.');
@@ -616,14 +616,13 @@ function blockchyp_wc_init()
                             'redirect' => $this->get_return_url($order)
                         );
                     }
-                }
-                else {
+                } else {
                     // Process payment using BlockChyp SDK: Default Charge (Combined Auth/Capture)
                     $response = BlockChyp::charge($request);
                     
                     // Handle payment response
                     if ($response['approved'] || $response['success']) {
-                        if(isset($response["transactionId"])) {
+                        if (isset($response["transactionId"])) {
                             $transactionId = $response["transactionId"];
                         } else {
                             // Handle the case where transactionId is not set in the response
@@ -820,8 +819,7 @@ function blockchyp_wc_init()
                             $order->add_order_note(sprintf("BlockChyp Refund Failed.<br/>Response Description: %s", $response["responseDescription"]));
                             return false;
                         }
-                    }
-                    else {  
+                    } else {
                         // If the payment is not captured, void the preauth instead of refunding
                         $response = BlockChyp::void($request);
 
@@ -836,8 +834,7 @@ function blockchyp_wc_init()
                             return false;
                         }
                     }
-                }
-                else {
+                } else {
                     $response = BlockChyp::refund($request);
 
                     // Handle refund response

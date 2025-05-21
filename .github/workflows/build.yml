@@ -74,10 +74,12 @@ jobs:
         uses: php-actions/composer@v6
         with:
           php_version: '8.3'
+      - name: Debug role variable
+        run: echo "${{ vars.AWS_BLOCKCHYP_DEV_GITHUB_DEPLOY_ROLE }}"
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ vars.AWS_BLOCKCHYP_STAGE_GITHUB_DEPLOY_ROLE }}
+          role-to-assume: ${{ vars.AWS_BLOCKCHYP_DEV_GITHUB_DEPLOY_ROLE }}
           aws-region: us-west-2
       - name: Sync to S3
         run: .github/deploy.sh s3

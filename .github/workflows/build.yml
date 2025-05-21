@@ -79,7 +79,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ vars.AWS_BLOCKCHYP_DEV_GITHUB_DEPLOY_ROLE }}
+          role-to-assume: arn:aws:iam::105741232974:role/GitHubDeployRoleWoocommerce
           aws-region: us-west-2
       - name: Sync to S3
         run: .github/deploy.sh s3

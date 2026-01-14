@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ master ]
 
+permissions:
+  id-token: write
+  contents: write
 jobs:
   build:
 
@@ -22,7 +25,7 @@ jobs:
 
       - name: Cache dependencies
         id: composer-cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: vendor
           key: ${{ runner.os }}-php-composer-sync-${{ hashFiles('**/composer.lock') }}-
@@ -61,7 +64,7 @@ jobs:
 
       - name: Cache dependencies
         id: composer-cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: vendor
           key: ${{ runner.os }}-php-composer-no-dev-${{ hashFiles('**/composer.lock') }}-
@@ -71,13 +74,15 @@ jobs:
         uses: php-actions/composer@v6
         with:
           php_version: '8.3'
-
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_BLOCKCHYP_WOO_GITHUB_DEPLOY_ROLE }}
+          aws-region: us-west-2
       - name: Sync to S3
         run: .github/deploy.sh s3
         env:
           TEST_S3_BUCKET: ${{ secrets.TEST_S3_BUCKET }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
           WP_CLUSTER: ${{ secrets.WP_CLUSTER }}
           WP_SYNC_TASKDEF: ${{ secrets.WP_SYNC_TASKDEF }}

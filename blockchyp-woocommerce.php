@@ -567,7 +567,7 @@ function blockchyp_wc_init()
                     $response = BlockChyp::preauth($request);
 
                     // Handle payment response
-                    if ($response['approved'] || $response['success']) {
+                    if ($response['approved'] && $response['success']) {
                         if (isset($response["transactionId"])) {
                             $transactionId = $response["transactionId"];
                             $order->set_transaction_id($transactionId);
@@ -621,7 +621,7 @@ function blockchyp_wc_init()
                     $response = BlockChyp::charge($request);
                     
                     // Handle payment response
-                    if ($response['approved'] || $response['success']) {
+                    if ($response['approved'] && $response['success']) {
                         if (isset($response["transactionId"])) {
                             $transactionId = $response["transactionId"];
                         } else {
@@ -722,7 +722,7 @@ function blockchyp_wc_init()
                     $response = BlockChyp::capture($request);
 
                     // Handle capture response
-                    if ($response['approved']) {
+                    if ($response['approved'] && $response['success']) {
                         $order->update_meta_data('_blockchyp_payment_captured', 'yes');
                         $order->save();
                         $order->add_order_note(sprintf("BlockChyp Capture Approved.<br/>Auth Code: %s", $response["authCode"]));
@@ -810,7 +810,7 @@ function blockchyp_wc_init()
                         $response = BlockChyp::refund($request);
 
                         // Handle refund response
-                        if ($response['approved']) {
+                        if ($response['approved'] && $response['success']) {
                             $order->add_order_note(sprintf("BlockChyp Refund Approved.<br/>Amount: %s<br/>Auth Code: %s", $amount, $response["authCode"]));
                             return true;
                         } else {
@@ -824,7 +824,7 @@ function blockchyp_wc_init()
                         $response = BlockChyp::void($request);
 
                         // Handle void response
-                        if ($response['approved']) {
+                        if ($response['approved'] && $response['success']) {
                             $order->add_order_note(sprintf("BlockChyp Payment Voided.<br/>Amount: %s<br/>Auth Code: %s", $amount, $response["authCode"]));
                             return true;
                         } else {
@@ -838,7 +838,7 @@ function blockchyp_wc_init()
                     $response = BlockChyp::refund($request);
 
                     // Handle refund response
-                    if ($response['approved']) {
+                    if ($response['approved'] && $response['success']) {
                         $order->add_order_note(sprintf("BlockChyp Refund Approved.<br/>Amount: %s<br/>Auth Code: %s", $amount, $response["authCode"]));
                         return true;
                     } else {

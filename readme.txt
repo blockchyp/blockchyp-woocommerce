@@ -3,7 +3,7 @@ Contributors: blockchyp
 Tags: payments, blockchyp, credit card, woocommerce
 Requires at least: 6.4
 Tested up to: 6.5
-Stable tag: 1.3.0
+Stable tag: 1.3.1
 Requires PHP: 7.4
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
@@ -86,6 +86,9 @@ If the "Preauth/Capture Mode" checkbox is not selected, which is default, paymen
 3. How to disable Checkout Blocks.
 
 == Changelog ==
+
+= 1.3.1
+* Fixed payment approval logic
 
 = 1.3.0 =
 Added functionality for Preauth/Capture model

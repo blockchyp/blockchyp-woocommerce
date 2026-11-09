@@ -8,16 +8,16 @@
     "packages": [
         {
             "name": "blockchyp/blockchyp-php",
-            "version": "v2.18.5",
+            "version": "v2.30.19",
             "source": {
                 "type": "git",
                 "url": "https://github.com/blockchyp/blockchyp-php.git",
-                "reference": "e493554387c4c2503ae0b85a281186f3de6476fa"
+                "reference": "5ebf129caf6fb1ff61d00b00199491bf1b83b824"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/blockchyp/blockchyp-php/zipball/e493554387c4c2503ae0b85a281186f3de6476fa",
-                "reference": "e493554387c4c2503ae0b85a281186f3de6476fa",
+                "url": "https://api.github.com/repos/blockchyp/blockchyp-php/zipball/5ebf129caf6fb1ff61d00b00199491bf1b83b824",
+                "reference": "5ebf129caf6fb1ff61d00b00199491bf1b83b824",
                 "shasum": ""
             },
             "require": {
@@ -41,9 +41,9 @@
             "homepage": "https://www.blockchyp.com/",
             "support": {
                 "issues": "https://github.com/blockchyp/blockchyp-php/issues",
-                "source": "https://github.com/blockchyp/blockchyp-php/tree/v2.18.5"
+                "source": "https://github.com/blockchyp/blockchyp-php/tree/v2.30.19"
             },
-            "time": "2024-04-29T16:25:59+00:00"
+            "time": "2026-09-29T17:34:17+00:00"
         }
     ],
     "packages-dev": [
